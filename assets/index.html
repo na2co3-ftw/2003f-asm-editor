@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ja">
+<head>
+	<meta charset="UTF-8">
+	<title>2003'd ferlesyl Asm Editor</title>
+	<link rel="stylesheet" href="bundle.css">
+	<link rel="stylesheet" href="style.css">
+	<script src="scripts.js"></script>
+</head>
+<body>
+<h2><span class="lineparine">2003'd ferlesyl</span> Asm Editor</h2>
+<p>
+	<a href="https://github.com/na2co3-ftw/2003f-asm-editor" target="_blank" class="english">view on github</a>
+</p>
+<p>
+	<a href="http://jurliyuuri.com/OS/" target="_blank">悠里世界のOSのエミュレータ作ろうぜという計画</a>
+</p>
+<p>
+	<label><input type="checkbox" id="use-liparxe"> リパーシェで表示する</label>
+</p>
+ファイルから読み込む: <input type="file" id="import">
+<div id="editor"></div>
+<p id="parse-errors"></p>
+<hr>
+<button id="execute">実行</button>
+<button id="pause">中断</button>
+<button id="stop">終了</button> |
+<button id="step">ステップ実行</button>
+<div id="out">
+	<p>
+		<label><input type="checkbox" id="out-ishex" checked="checked"> 16進数で表示する</label>
+	</p>
+	<p class="monospace">
+		Registers:<br>
+		<span class="lineparine">
+		f0 = <span id="out-f0">-</span><br>
+		f1 = <span id="out-f1">-</span><br>
+		f2 = <span id="out-f2">-</span><br>
+		f3 = <span id="out-f3">-</span><br>
+		f5 = <span id="out-f5">-</span><br>
+		nx = <span id="out-nx">-</span><br>
+		xx = <span id="out-xx">-</span><br>
+		flag = <span id="out-flag"></span>
+		</span>
+	</p>
+	<p class="monospace">
+		Memory:<br>
+		<span id="out-memory" class="lineparine"></span>
+	</p>
+	<p class="monospace">
+		Logs:<br>
+		<span id="out-log" class="lineparine"></span>
+	</p>
+</div>
+</body>
+</html>

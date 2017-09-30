@@ -1,0 +1,66 @@
+@charset "UTF-8";
+
+body {
+	background: white;
+	color: #222;
+	line-height: 1.4;
+	-webkit-text-size-adjust: 100%;
+	margin: 7px;
+	padding: 0;
+	font-family: Arial, Helvetica, "ヒラギノ角ゴ Pro W3", "Hiragino Kaku Gothic Pro", "メイリオ", Meiryo, "ＭＳ Ｐゴシック", "MS PGothic", sans-serif;
+	font-size: 15px;
+}
+
+@font-face{
+	font-family: "jietoden";
+	src: url(./jietoden_liparxe.woff);
+}
+
+.CodeMirror {
+	font-size: 14px;
+	border: 1px solid black;
+	height: 30em;
+}
+
+.monospace {
+	font-family: Consolas, monospace;
+}
+
+.liparxe .lineparine {
+	font-family: "jietoden", sans-serif;
+}
+
+.liparxe .lineparine .monospace,
+.liparxe .monospace .lineparine,
+.liparxe .lineparine.monospace,
+.liparxe .CodeMirror {
+	font-family: "jietoden", monospace;
+}
+
+#parse-errors, #runtime-errors {
+	color: red;
+}
+
+.CodeMirror-pointer-nx {
+	background: rgba(255, 0, 0, 0.3);
+}
+
+.out-memory-pointer {
+	outline: 1px solid black;
+	position: relative;
+}
+.out-memory-pointer::before {
+	content: "";
+	position: absolute;
+	bottom: 100%;
+	left: 0;
+	font-size: 60%;
+}
+
+.out-memory-pointer.f5 {
+	outline-color: blue;
+}
+.out-memory-pointer.f5::before {
+	content: "f5";
+	color: blue;
+}
