@@ -1,6 +1,6 @@
 import {Instruction, Register, RuntimeError, Value} from "./types";
-import {initialAddress, TentativeLoad} from "./tentativeLoad";
 import {Memory} from "./memory";
+import {initialAddress, Program} from "./linker";
 
 const initialF5 = 0x6d7aa0f8|0;
 const outermostRetAddress = 0xbda574b8|0;
@@ -47,7 +47,7 @@ export class CPU {
 export class Hardware {
 	cpu: CPU;
 	memory: Memory;
-	program: TentativeLoad;
+	program: Program;
 	log: string[];
 
 	constructor() {
@@ -57,7 +57,7 @@ export class Hardware {
 		this.log = [];
 	}
 
-	execute(program: TentativeLoad, callback: () => void) {
+	execute(program: Program, callback: () => void) {
 		this.load(program);
 		this.log = [];
 		const f = () => {
@@ -70,7 +70,7 @@ export class Hardware {
 		setTimeout(f, 0);
 	}
 
-	load(program: TentativeLoad) {
+	load(program: Program) {
 		this.program = program;
 	}
 

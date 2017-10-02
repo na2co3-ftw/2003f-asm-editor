@@ -9,7 +9,7 @@ import "./codemirror/addon/lint/lint.css";
 
 import "./codemirror/mode/2003fasm/2003fasm";
 import {fullParse} from "./2003fasm/parse";
-import {TentativeLoad} from "./2003fasm/tentativeLoad";
+import {linker} from "./2003fasm/linker";
 import {Hardware} from "./2003fasm/execute";
 import {SECTION_SIZE} from "./2003fasm/memory";
 const SECTION_LENGTH = 1 << SECTION_SIZE;
@@ -72,8 +72,8 @@ document.addEventListener("DOMContentLoaded", function () {
 			return;
 		}
 		try {
-			const i = fullParse(newSource);
-			program = TentativeLoad.from(i);
+			const persed = fullParse(newSource);
+			program = linker([persed]);
 			source = newSource;
 			parseErrors = "";
 			executable = true;

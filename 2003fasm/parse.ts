@@ -1,8 +1,16 @@
 import {Cond, Instruction, ParseError, Register, REGISTER_RESERVED, Token, Value, WritableValue} from "./types";
 
-export function fullParse(str: string): {instruction: Instruction, labels: string[]}[] {
+export type LabeledInstructions = {instruction: Instruction, labels: string[]}[]
+
+export interface PersedFile {
+	instructions: LabeledInstructions;
+	kueList: string[];
+	xokList: string[];
+}
+
+export function fullParse(str: string): PersedFile {
 	const ts = tokenize(str.replace(/\r\n?/g, "\n"));
-	return toInstructions(beautify(ts))[0];
+	return toInstructions(beautify(ts));
 }
 
 function tokenize(source: string): Token[] {
@@ -106,14 +114,14 @@ const RL = {
 	"malkrz": Instruction.MalKrz
 };
 
-function toInstructions(tokens: Token[]): [{instruction: Instruction, labels: string[]}[], string[], string[]] {
+function toInstructions(tokens: Token[]): PersedFile {
 	let isCI = false;
 	let kueList: string[] = [];
 	let xokList: string[] = [];
 	let labels: string[] = [];
-	let ret: {instruction: Instruction, labels: string[]}[] = [];
+	let instructions: LabeledInstructions = [];
 	function pushInstruction(instruction: Instruction) {
-		ret.push({instruction, labels});
+		instructions.push({instruction, labels});
 		labels = [];
 	}
 
@@ -148,13 +156,13 @@ function toInstructions(tokens: Token[]): [{instruction: Instruction, labels: st
 			labels.push(parseLabel(tokens[i + 1]));
 			i += 1;
 		} else if (token == "l'" && i + 1 < tokens.length) {
-			if (ret.length == 0) {
+			if (instructions.length == 0) {
 				throw new ParseError("l' must be preceded by an instruction");
 			}
-			if (ret[ret.length - 1].instruction == null) {
+			if (instructions[instructions.length - 1].instruction == null) {
 				throw new ParseError("nll must not be followed by l'");
 			}
-			ret[ret.length - 1].labels.push(parseLabel(tokens[i + 1]));
+			instructions[instructions.length - 1].labels.push(parseLabel(tokens[i + 1]));
 			i += 1;
 		} else if (token == "kue" && i + 1 < tokens.length) {
 			kueList.push(parseLabel(tokens[i + 1]));
@@ -167,7 +175,7 @@ function toInstructions(tokens: Token[]): [{instruction: Instruction, labels: st
 	if (labels.length != 0) {
 		throw new ParseError("nll must be followed by an instruction");
 	}
-	return [ret, kueList, xokList];
+	return {instructions, kueList, xokList};
 }
 
 function parseRegister(token: string): Register {
