@@ -1,10 +1,14 @@
 import {TentativeLoad} from "./tentativeLoad";
 import {PersedFile} from "./parse";
-import {ParseError} from "./types";
+import {Instruction, ParseError} from "./types";
 
 export const initialAddress = 0x1482e8d4|0;
 
-export type Program = TentativeLoad;
+export interface Program {
+	resolveLabel(label: string): number | null;
+
+	readNX(address: number): [number, Instruction] | null;
+}
 
 export function linker(files: PersedFile[]): Program {
 	if (files.length == 1) {

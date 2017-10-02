@@ -1,10 +1,25 @@
 import {Instruction, ParseError} from "./types";
+import {Program} from "./linker";
 
-export class TentativeLoad {
+export class TentativeLoad implements Program {
 	constructor(
-		public tentativeAddresTable: {[address: number]: [number, Instruction]},
-		public labelTable: {[label: string]: number}
+		private tentativeAddresTable: {[address: number]: [number, Instruction]},
+		private labelTable: {[label: string]: number}
 	) {}
+
+	resolveLabel(label: string): number | null {
+		if (this.labelTable.hasOwnProperty(label)) {
+			return this.labelTable[label];
+		}
+		return null;
+	}
+
+	readNX(address: number): [number, Instruction] | null {
+		if (this.tentativeAddresTable.hasOwnProperty(address)) {
+			return this.tentativeAddresTable[address];
+		}
+		return null;
+	}
 
 	static from(initialAddress: number, arr: {instruction: Instruction, labels: string[]}[]): TentativeLoad {
 		let tentativeAddressTable: {[address: number]: [number, Instruction]} = {};

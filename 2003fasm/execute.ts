@@ -96,9 +96,9 @@ export class Hardware {
 	}
 
 	updateXXAndGetInstruction(): Instruction {
-		const tat = this.program.tentativeAddresTable;
-		if (tat.hasOwnProperty(this.cpu.nx)) {
-			const [newXX, instruction] = tat[this.cpu.nx];
+		const xxInst = this.program.readNX(this.cpu.nx);
+		if (xxInst != null) {
+			const [newXX, instruction] = xxInst;
 			this.cpu.xx = newXX;
 			return instruction;
 		} else {

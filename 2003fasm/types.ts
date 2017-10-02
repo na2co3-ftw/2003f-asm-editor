@@ -78,11 +78,11 @@ export namespace Value {
 		constructor(private label: string) {}
 
 		getValue(hw: Hardware): number {
-			const labelTable = hw.program.labelTable;
-			if (labelTable.hasOwnProperty(this.label)) {
-				return labelTable[this.label];
+			const address = hw.program.resolveLabel(this.label);
+			if (address == null) {
+				throw new RuntimeError(`Undefined label \`${this.label}\``);
 			}
-			throw new RuntimeError(`Undefined label \`${this.label}\``);
+			return address;
 		}
 	}
 }
