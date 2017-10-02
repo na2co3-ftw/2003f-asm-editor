@@ -187,7 +187,6 @@ document.addEventListener("DOMContentLoaded", function () {
 						CodeMirror.Pos(inst.token.row, inst.token.column + inst.token.text.length),
 						{className: "CodeMirror-pointer-nx"}
 					);
-					console.dir(nxPointerMarker);
 				}
 			}
 		}
