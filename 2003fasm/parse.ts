@@ -2,7 +2,7 @@ import {Cond, Instruction, ParseError, Register, REGISTER_RESERVED, Token, Value
 
 export function fullParse(str: string): {instruction: Instruction, labels: string[]}[] {
 	const ts = tokenize(str.replace(/\r\n?/g, "\n"));
-	return toInstructions(beautify(ts));
+	return toInstructions(beautify(ts))[0];
 }
 
 function tokenize(source: string): Token[] {
@@ -106,8 +106,10 @@ const RL = {
 	"malkrz": Instruction.MalKrz
 };
 
-function toInstructions(tokens: Token[]): {instruction: Instruction, labels: string[]}[] {
+function toInstructions(tokens: Token[]): [{instruction: Instruction, labels: string[]}[], string[], string[]] {
 	let isCI = false;
+	let kueList: string[] = [];
+	let xokList: string[] = [];
 	let labels: string[] = [];
 	let ret: {instruction: Instruction, labels: string[]}[] = [];
 	function pushInstruction(instruction: Instruction) {
@@ -143,10 +145,7 @@ function toInstructions(tokens: Token[]): {instruction: Instruction, labels: str
 			pushInstruction(new Instruction.Inj(tokens[i], a, b, c));
 			i += 3;
 		} else if (token == "nll" && i + 1 < tokens.length) {
-			if (!isValidLabel(tokens[i + 1].text)) {
-				throw new ParseError(`\`${tokens[i + 1].text}\` cannot be used as a valid label`);
-			}
-			labels.push(tokens[i + 1].text);
+			labels.push(parseLabel(tokens[i + 1]));
 			i += 1;
 		} else if (token == "l'" && i + 1 < tokens.length) {
 			if (ret.length == 0) {
@@ -155,11 +154,12 @@ function toInstructions(tokens: Token[]): {instruction: Instruction, labels: str
 			if (ret[ret.length - 1].instruction == null) {
 				throw new ParseError("nll must not be followed by l'");
 			}
-			if (!isValidLabel(tokens[i + 1].text)) {
-				throw new ParseError(`\`${tokens[i + 1].text}\` cannot be used as a valid label`);
-			}
-			ret[ret.length - 1].labels.push(tokens[i + 1].text);
+			ret[ret.length - 1].labels.push(parseLabel(tokens[i + 1]));
 			i += 1;
+		} else if (token == "kue" && i + 1 < tokens.length) {
+			kueList.push(parseLabel(tokens[i + 1]));
+		} else if (token == "xok" && i + 1 < tokens.length) {
+			xokList.push(parseLabel(tokens[i + 1]));
 		} else {
 			throw new ParseError("Unparsable command sequence " + tokens.map(t => t.text).slice(i).join(" "));
 		}
@@ -167,7 +167,7 @@ function toInstructions(tokens: Token[]): {instruction: Instruction, labels: str
 	if (labels.length != 0) {
 		throw new ParseError("nll must be followed by an instruction");
 	}
-	return ret;
+	return [ret, kueList, xokList];
 }
 
 function parseRegister(token: string): Register {
@@ -216,4 +216,11 @@ function isValidLabel(name: string): boolean {
 		REGISTER_RESERVED.indexOf(name) < 0 &&
 		name.search(/^[pFftcxkqhRzmnrljwbVvdsgXiyuoea0-9'_-]+$/) >= 0
 	);
+}
+
+function parseLabel(token: Token): string {
+	if (isValidLabel(token.text)) {
+		return token.text;
+	}
+	throw new ParseError(`\`${token.text}\` cannot be used as a valid label`);
 }

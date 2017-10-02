@@ -30,7 +30,8 @@
 
 	const DIRECTIVES = [
 		"'c'i", "'i'c",
-		"l'", "nll"
+		"l'", "nll",
+		"kue", "kox"
 	];
 
 	const BUILTINFUNCTIONS = [
