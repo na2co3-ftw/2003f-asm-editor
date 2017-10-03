@@ -18,6 +18,7 @@
     "webpack": "^3.3.0"
   },
   "dependencies": {
+    "@types/codemirror": "0.0.47",
     "codemirror": "^5.30.0"
   }
 }

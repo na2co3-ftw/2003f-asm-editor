@@ -1,4 +1,5 @@
-import CodeMirror from "codemirror/lib/codemirror";
+/// <reference path="./codemirror/codemirror-typing-complement.d.ts" />
+import * as CodeMirror from "codemirror";
 import "codemirror/lib/codemirror.css";
 
 import "codemirror/theme/neat.css";
@@ -12,6 +13,7 @@ import {fullParse} from "./2003fasm/parse";
 import {linker} from "./2003fasm/linker";
 import {Hardware} from "./2003fasm/execute";
 import {SECTION_SIZE} from "./2003fasm/memory";
+import {Instruction} from "./2003fasm/types";
 const SECTION_LENGTH = 1 << SECTION_SIZE;
 
 const DEFAULT_ASM = `'c'i    
@@ -45,23 +47,28 @@ document.addEventListener("DOMContentLoaded", function () {
 	let executable = false;
 	let executing = false;
 	let pausing = false;
-	let nxPointerMarker = null;
+	let nxPointerMarker: CodeMirror.TextMarker | null = null;
 
-	let editor = CodeMirror(document.getElementById("editor"), {
+	let editor = CodeMirror(document.getElementById("editor")!, {
 		value: DEFAULT_ASM,
 		mode: "2003fasm",
 		theme: "neat",
 		styleActiveLine: true,
 		lineNumbers: true,
 		// gutters: [* "CodeMirror-lint-markers"],
-		lint: function (newSource) {
-			parse(newSource);
+		lint: {
+			getAnnotations: function (newSource: string): CodeMirror.Annotation[] {
+				parse(newSource);
 
-			// console.log(p.tokens.map(t => t.toString()));
-			// asm.load(source);
-			// const errors = asm.errors.map(parseErrorToLintMarker("error"));
-			// const warnings = asm.warnings.map(parseErrorToLintMarker("warning"));
-			// return errors.concat(warnings);
+				// console.log(p.tokens.map(t => t.toString()));
+				// asm.load(source);
+				// const errors = asm.errors.map(parseErrorToLintMarker("error"));
+				// const warnings = asm.warnings.map(parseErrorToLintMarker("warning"));
+				// return errors.concat(warnings);
+				return [];
+			},
+			async: false,
+			hasGutters: true
 		}
 	});
 
@@ -93,7 +100,7 @@ document.addEventListener("DOMContentLoaded", function () {
 	// 	});
 	// }
 
-	document.getElementById("execute").addEventListener("click", () => {
+	document.getElementById("execute")!.addEventListener("click", () => {
 		if (!executing) {
 			parse(editor.getValue());
 			if (!executable) {
@@ -108,7 +115,7 @@ document.addEventListener("DOMContentLoaded", function () {
 		timeOutHundler = setTimeout(exec, tickTime);
 	});
 
-	document.getElementById("pause").addEventListener("click", () => {
+	document.getElementById("pause")!.addEventListener("click", () => {
 		if (timeOutHundler >= 0) {
 			clearTimeout(timeOutHundler);
 			timeOutHundler = -1;
@@ -117,7 +124,7 @@ document.addEventListener("DOMContentLoaded", function () {
 		update();
 	});
 
-	document.getElementById("stop").addEventListener("click", () => {
+	document.getElementById("stop")!.addEventListener("click", () => {
 		if (timeOutHundler >= 0) {
 			clearTimeout(timeOutHundler);
 			timeOutHundler = -1;
@@ -126,7 +133,7 @@ document.addEventListener("DOMContentLoaded", function () {
 		update();
 	});
 
-	document.getElementById("step").addEventListener("click", () => {
+	document.getElementById("step")!.addEventListener("click", () => {
 		if (!executing) {
 			parse(editor.getValue());
 			if (!executable) {
@@ -142,20 +149,20 @@ document.addEventListener("DOMContentLoaded", function () {
 		update();
 	});
 
-	document.getElementById("import").addEventListener("change", e => {
-		for (const file of e.target.files) {
+	document.getElementById("import")!.addEventListener("change", e => {
+		for (const file of Array.from((e.target as HTMLInputElement).files!)) {
 			const reader = new FileReader();
 			reader.addEventListener("load", e => {
-				let contents = e.target.result;
+				let contents = (e.target as FileReader).result;
 				editor.setValue(contents);
 			});
 			reader.readAsText(file);
 		}
 	});
 
-	document.getElementById("out-ishex").addEventListener("change", function () {
-		console.log(this.checked);
-		hex = this.checked;
+	document.getElementById("out-ishex")!.addEventListener("change", function () {
+		console.log((this as HTMLInputElement).checked);
+		hex = (this as HTMLInputElement).checked;
 		update();
 	});
 
@@ -172,13 +179,13 @@ document.addEventListener("DOMContentLoaded", function () {
 	}
 
 	function update() {
-		document.getElementById("parse-errors").innerText = parseErrors;
+		document.getElementById("parse-errors")!.innerText = parseErrors;
 
 		if (nxPointerMarker != null) {
 			nxPointerMarker.clear();
 		}
 		if (executing) {
-			const tat = machine.program.tentativeAddresTable;
+			const tat = (machine.program as any).tentativeAddresTable as {[address: number]: [number, Instruction]};
 			if (tat.hasOwnProperty(machine.cpu.nx)) {
 				const [_, inst] = tat[machine.cpu.nx];
 				if (inst.token != null) {
@@ -191,14 +198,14 @@ document.addEventListener("DOMContentLoaded", function () {
 			}
 		}
 
-		document.getElementById("out-f0").innerText = showInt32Pad(machine.cpu.f0, hex);
-		document.getElementById("out-f1").innerText = showInt32Pad(machine.cpu.f1, hex);
-		document.getElementById("out-f2").innerText = showInt32Pad(machine.cpu.f2, hex);
-		document.getElementById("out-f3").innerText = showInt32Pad(machine.cpu.f3, hex);
-		document.getElementById("out-f5").innerText = showInt32Pad(machine.cpu.f5, hex);
-		document.getElementById("out-nx").innerText = showInt32Pad(machine.cpu.nx, hex);
-		document.getElementById("out-xx").innerText = showInt32Pad(machine.cpu.xx, hex);
-		document.getElementById("out-flag").innerText = machine.cpu.flag ? "1" : "0";
+		document.getElementById("out-f0")!.innerText = showInt32Pad(machine.cpu.f0, hex);
+		document.getElementById("out-f1")!.innerText = showInt32Pad(machine.cpu.f1, hex);
+		document.getElementById("out-f2")!.innerText = showInt32Pad(machine.cpu.f2, hex);
+		document.getElementById("out-f3")!.innerText = showInt32Pad(machine.cpu.f3, hex);
+		document.getElementById("out-f5")!.innerText = showInt32Pad(machine.cpu.f5, hex);
+		document.getElementById("out-nx")!.innerText = showInt32Pad(machine.cpu.nx, hex);
+		document.getElementById("out-xx")!.innerText = showInt32Pad(machine.cpu.xx, hex);
+		document.getElementById("out-flag")!.innerText = machine.cpu.flag ? "1" : "0";
 
 		let memory = "";
 		let inF5 = false;
@@ -218,7 +225,7 @@ document.addEventListener("DOMContentLoaded", function () {
 					memory += hex ? "--" : "---";
 				}
 				if (inF5) {
-					if (address == (machine.cpu.f5 + 3) | 0) {
+					if (address == ((machine.cpu.f5 + 3) | 0)) {
 						memory += '</span>';
 						inF5 = false;
 					}
@@ -231,17 +238,17 @@ document.addEventListener("DOMContentLoaded", function () {
 			}
 			memory += "<br>";
 		}
-		document.getElementById("out-memory").innerHTML = memory;
-		document.getElementById("out-log").innerText = machine.log.join("\n");
+		document.getElementById("out-memory")!.innerHTML = memory;
+		document.getElementById("out-log")!.innerText = machine.log.join("\n");
 
-		document.getElementById("execute").disabled = executing && !pausing;
-		document.getElementById("pause").disabled = !executing || pausing;
-		document.getElementById("stop").disabled = !executing;
-		document.getElementById("step").disabled = executing && !pausing;
+		(document.getElementById("execute") as HTMLInputElement).disabled = executing && !pausing;
+		(document.getElementById("pause") as HTMLInputElement).disabled = !executing || pausing;
+		(document.getElementById("stop") as HTMLInputElement).disabled = !executing;
+		(document.getElementById("step") as HTMLInputElement).disabled = executing && !pausing;
 	}
 
-	document.getElementById("use-liparxe").addEventListener("change", function () {
-		if (this.checked) {
+	document.getElementById("use-liparxe")!.addEventListener("change", function () {
+		if ((this as HTMLInputElement).checked) {
 			document.body.classList.add("liparxe");
 		} else {
 			document.body.classList.remove("liparxe");

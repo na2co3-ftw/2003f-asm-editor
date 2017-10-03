@@ -1,4 +1,4 @@
-import CodeMirror from "codemirror/lib/codemirror";
+import * as CodeMirror from "codemirror";
 import "codemirror/addon/mode/simple";
 
 const MNEMONICS = [
