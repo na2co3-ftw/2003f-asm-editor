@@ -161,7 +161,6 @@ document.addEventListener("DOMContentLoaded", function () {
 	});
 
 	document.getElementById("out-ishex")!.addEventListener("change", function () {
-		console.log((this as HTMLInputElement).checked);
 		hex = (this as HTMLInputElement).checked;
 		update();
 	});
