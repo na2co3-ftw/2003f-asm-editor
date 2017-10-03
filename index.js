@@ -1,11 +1,11 @@
-import CodeMirror from "./codemirror/lib/codemirror";
-import "./codemirror/lib/codemirror.css";
+import CodeMirror from "codemirror/lib/codemirror";
+import "codemirror/lib/codemirror.css";
 
-import "./codemirror/theme/neat.css";
+import "codemirror/theme/neat.css";
 
-import "./codemirror/addon/selection/active-line";
-import "./codemirror/addon/lint/lint";
-import "./codemirror/addon/lint/lint.css";
+import "codemirror/addon/selection/active-line";
+import "codemirror/addon/lint/lint";
+import "codemirror/addon/lint/lint.css";
 
 import "./codemirror/mode/2003fasm/2003fasm";
 import {fullParse} from "./2003fasm/parse";

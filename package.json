@@ -16,5 +16,8 @@
     "ts-loader": "^2.3.1",
     "typescript": "^2.4.2",
     "webpack": "^3.3.0"
+  },
+  "dependencies": {
+    "codemirror": "^5.30.0"
   }
 }
