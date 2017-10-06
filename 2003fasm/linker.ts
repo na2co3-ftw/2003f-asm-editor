@@ -1,18 +1,67 @@
-import {TentativeLoad} from "./tentativeLoad";
-import {PersedFile} from "./parse";
+import {MAX_SIZE, TentativeLoad} from "./tentativeLoad";
+import {ParsedFile} from "./parse";
 import {Instruction, ParseError} from "./types";
 
-export const initialAddress = 0x1482e8d4|0;
+export const initialAddress = 0x14830000|0;
 
-export interface Program {
-	resolveLabel(label: string): number | null;
+export class Program {
+	constructor(
+		private pages: TentativeLoad[],
+		private kueTable: {[label: string]: number}
+		) {}
 
-	readNX(address: number): [number, Instruction] | null;
+	readNX(address: number): [number, Instruction] | null {
+		const pageId = addressToPageId(address);
+		if (this.pages.hasOwnProperty(pageId)) {
+			return this.pages[pageId].readNX(address);
+		}
+		return null;
+	}
+
+	resolveLabel(currentNX: number, label: string): number | null {
+		const pageId = addressToPageId(currentNX);
+		if (this.pages.hasOwnProperty(pageId)) {
+			return this.pages[pageId].resolveLabel(label, this.kueTable);
+		}
+		return null;
+	}
+
+	static link(files: ParsedFile[]): Program {
+		let hasMain = false;
+		let loads: TentativeLoad[] = [];
+		let kueTable: {[label: string]: number} = {};
+		files.forEach((file, index) => {
+			let pageId = index + 1;
+			if (file.kueList.length == 0) {
+				pageId = 0;
+				if (hasMain) {
+					throw new ParseError("multiple files lack `kue`");
+				}
+				hasMain = true;
+			}
+
+			const loaded = TentativeLoad.from((initialAddress + pageId * MAX_SIZE) | 0, file);
+
+			for (const kue of file.kueList) {
+				const address = loaded.resolveLabel(kue);
+				if (address == null) {
+					throw new ParseError(`cannot export label \`${kue}\` that is not defined in the file`);
+				}
+				if (kueTable.hasOwnProperty(kue)) {
+					throw new ParseError(`conflict: different files export the same label \`${kue}\``);
+				}
+				kueTable[kue] = address;
+			}
+
+			loads[pageId] = loaded;
+		});
+		if (!hasMain) {
+			throw new ParseError("all files have `kue`");
+		}
+		return new Program(loads, kueTable);
+	}
 }
 
-export function linker(files: PersedFile[]): Program {
-	if (files.length == 1) {
-		return TentativeLoad.from(initialAddress, files[0].instructions);
-	}
-	throw new ParseError("Linking multiple files is not yet implemented");
+function addressToPageId(address: number): number {
+	return Math.floor(((address - initialAddress) >>> 0) / MAX_SIZE);
 }

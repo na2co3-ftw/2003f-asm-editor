@@ -109,14 +109,9 @@ export default class HardwareState extends React.Component<HardwareStateProps, H
 	}
 }
 
-function showInt32(number: number, hex: boolean = false): string {
-	number = number < 0 ? number + 0x100000000 : number;
-	return number.toString(hex ? 16 : 10);
-}
-
 function showInt32Pad(number: number, hex: boolean = false): string {
 	const length = hex ? 8 : 10;
-	let str = showInt32(number, hex);
+	let str = (number >>> 0).toString(hex ? 16 : 10);
 	while (str.length < length) {
 		str = "0" + str;
 	}

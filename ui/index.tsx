@@ -4,7 +4,6 @@ import ReactDOM = require("react-dom");
 import Editor, {MarkerInfo} from "./editor";
 import HardwareState from "./hardware-state";
 
-import {Instruction} from "../2003fasm/types";
 import {Hardware} from "../2003fasm/execute";
 
 const TICK_TIME = 50;
@@ -137,9 +136,9 @@ class App extends React.Component<{}, AppState> {
 	render() {
 		const markers: MarkerInfo[] = [];
 		if (this.state.executing) {
-			const tat = (this.state.machine.program as any).tentativeAddresTable as {[address: number]: [number, Instruction]};
-			if (tat.hasOwnProperty(this.state.machine.cpu.nx)) {
-				const [_, inst] = tat[this.state.machine.cpu.nx];
+			const _inst = this.state.machine.program.readNX(this.state.machine.cpu.nx);
+			if (_inst != null) {
+				const [_, inst] = _inst;
 				if (inst.token != null) {
 					markers.push({
 						from: {line: inst.token.row, ch: inst.token.column},

@@ -11,7 +11,7 @@ import "codemirror/addon/lint/lint.css";
 import "../codemirror/mode/2003fasm/2003fasm";
 
 import {fullParse} from "../2003fasm/parse";
-import {linker, Program} from "../2003fasm/linker";
+import {Program} from "../2003fasm/linker";
 import {ParseError} from "../2003fasm/types";
 
 const DEFAULT_ASM = `'c'i    
@@ -122,7 +122,7 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 		}
 
 		try {
-			const program = linker([fullParse(newSource)]);
+			const program = Program.link([fullParse(newSource)]);
 			this.parsedSource = newSource;
 			this.parsedProgram = program;
 			this.setState({parseErrors: ""});

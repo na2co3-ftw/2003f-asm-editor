@@ -2,13 +2,13 @@ import {Cond, Instruction, ParseError, Register, REGISTER_RESERVED, Token, Value
 
 export type LabeledInstructions = {instruction: Instruction, labels: string[]}[]
 
-export interface PersedFile {
+export interface ParsedFile {
 	instructions: LabeledInstructions;
 	kueList: string[];
 	xokList: string[];
 }
 
-export function fullParse(str: string): PersedFile {
+export function fullParse(str: string): ParsedFile {
 	const ts = tokenize(str.replace(/\r\n?/g, "\n"));
 	return toInstructions(beautify(ts));
 }
@@ -114,7 +114,7 @@ const RL = {
 	"malkrz": Instruction.MalKrz
 };
 
-function toInstructions(tokens: Token[]): PersedFile {
+function toInstructions(tokens: Token[]): ParsedFile {
 	let isCI = false;
 	let kueList: string[] = [];
 	let xokList: string[] = [];
@@ -166,8 +166,10 @@ function toInstructions(tokens: Token[]): PersedFile {
 			i += 1;
 		} else if (token == "kue" && i + 1 < tokens.length) {
 			kueList.push(parseLabel(tokens[i + 1]));
+			i += 1;
 		} else if (token == "xok" && i + 1 < tokens.length) {
 			xokList.push(parseLabel(tokens[i + 1]));
+			i += 1;
 		} else {
 			throw new ParseError("Unparsable command sequence " + tokens.map(t => t.text).slice(i).join(" "));
 		}

@@ -78,7 +78,7 @@ export namespace Value {
 		constructor(private label: string) {}
 
 		getValue(hw: Hardware): number {
-			const address = hw.program.resolveLabel(this.label);
+			const address = hw.program.resolveLabel(hw.cpu.nx, this.label);
 			if (address == null) {
 				throw new RuntimeError(`Undefined label \`${this.label}\``);
 			}
