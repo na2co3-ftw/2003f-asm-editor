@@ -1,9 +1,11 @@
 {
 	"compilerOptions": {
-		"module": "es2015",
+		"module": "commonjs",
 		"target": "es2015",
 		"sourceMap": true,
-		"strictNullChecks": true
+		"strictNullChecks": true,
+		"jsx": "react",
+		"types": []
 	},
 	"exclude": [
 		"node_modules"

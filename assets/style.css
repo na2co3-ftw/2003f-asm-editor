@@ -37,7 +37,7 @@ body {
 	font-family: "jietoden", monospace;
 }
 
-#parse-errors, #runtime-errors {
+.errors {
 	color: red;
 }
 

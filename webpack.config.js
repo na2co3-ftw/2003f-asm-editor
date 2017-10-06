@@ -4,12 +4,12 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = {
 	entry: [
-		path.join(__dirname, "index.ts")
+		path.join(__dirname, "ui/index.tsx")
 	],
 	module: {
 		rules: [
 			{
-				test: /\.ts$/,
+				test: /\.tsx?$/,
 				use: ["ts-loader"]
 			},
 			{
@@ -22,7 +22,7 @@ module.exports = {
 	},
 	devtool: "source-map",
 	resolve: {
-		extensions: [".ts", ".js"]
+		extensions: [".ts", ".tsx", ".js"]
 	},
 	output: {
 		path: path.join(__dirname, "out"),
