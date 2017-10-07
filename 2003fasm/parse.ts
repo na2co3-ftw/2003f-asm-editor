@@ -111,6 +111,7 @@ const RL = {
 	"dal": Instruction.Dal,
 	"dto": Instruction.Dto,
 	"dro": Instruction.Dro,
+	"dtosna": Instruction.Dtosna,
 	"malkrz": Instruction.MalKrz
 };
 

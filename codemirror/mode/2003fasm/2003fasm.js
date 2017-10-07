@@ -5,7 +5,7 @@ const MNEMONICS = [
 	"krz", "malkrz", "inj",
 	"ata", "nta",
 	"ada", "ekc", "dal", "nac",
-	"dto", "dro",
+	"dto", "dro", "dtosna",
 	"fi",
 	"fen"
 ];

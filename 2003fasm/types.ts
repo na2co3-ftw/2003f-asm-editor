@@ -133,11 +133,15 @@ export namespace Instruction {
 	}
 
 	export class Dto extends BinaryInstruction {
-		protected compute(a: number, b: number): number { return a >>> b; }
+		protected compute(a: number, b: number): number { return (b & 0xffffffe0) == 0 ? a >>> b : 0; }
 	}
 
 	export class Dro extends BinaryInstruction {
-		protected compute(a: number, b: number): number { return a << b; }
+		protected compute(a: number, b: number): number { return (b & 0xffffffe0) == 0 ? a << b : 0; }
+	}
+
+	export class Dtosna extends BinaryInstruction {
+		protected compute(a: number, b: number): number { return (b & 0xffffffe0) == 0 ? a >> b : 0; }
 	}
 
 	export class Krz implements  Instruction {
