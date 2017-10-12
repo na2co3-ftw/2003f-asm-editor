@@ -142,6 +142,12 @@ function toInstructions(tokens: Token[]): ParsedFile {
 			const dst = isCI ? parseL(tokens[i + 1]) : parseL(tokens[i + 2]);
 			pushInstruction(new RL[token](tokens[i], src, dst));
 			i += 2;
+		} else if (token == "lat" && i + 3 < tokens.length) {
+			const src = isCI ? parseR(tokens[i + 3]) : parseR(tokens[i + 1]);
+			const dstl = isCI ? parseL(tokens[i + 1]) : parseL(tokens[i + 2]);
+			const dsth = isCI ? parseL(tokens[i + 2]) : parseL(tokens[i + 3]);
+			pushInstruction(new Instruction.Lat(tokens[i], src, dstl, dsth));
+			i += 3;
 		} else if (token == "fi" && i + 3 < tokens.length && Cond.hasOwnProperty(tokens[i + 3].text)) {
 			const a = parseR(tokens[i + 1]);
 			const b = parseR(tokens[i + 2]);

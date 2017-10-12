@@ -1,4 +1,5 @@
 import {Hardware} from "./execute";
+import {BigInt} from "./bigint";
 
 export class Token {
 	constructor(public text: string, public row: number, public column: number) {}
@@ -142,6 +143,23 @@ export namespace Instruction {
 
 	export class Dtosna extends BinaryInstruction {
 		protected compute(a: number, b: number): number { return (b & 0xffffffe0) == 0 ? a >> b : 0; }
+	}
+
+	export class Lat implements Instruction {
+		constructor(
+			public token: Token | null,
+			private src: Value,
+			private dstl: WritableValue,
+			private dsth: WritableValue
+		) {}
+
+		exec(hw: Hardware) {
+			const a = BigInt.fromUInt32(this.src.getValue(hw));
+			const b = BigInt.fromUInt32(this.dstl.getValue(hw));
+			const dst = a.times(b).toInt32Array();
+			this.dsth.setValue(hw, typeof dst[1] != "undefined" ? dst[1] : 0);
+			this.dstl.setValue(hw, typeof dst[0] != "undefined" ? dst[0] : 0);
+		}
 	}
 
 	export class Krz implements  Instruction {
