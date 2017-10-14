@@ -156,7 +156,24 @@ export namespace Instruction {
 		exec(hw: Hardware) {
 			const a = BigInt.fromUInt32(this.src.getValue(hw));
 			const b = BigInt.fromUInt32(this.dstl.getValue(hw));
-			const dst = a.times(b).toInt32Array();
+			const dst = a.times(b).toInt32Array(2);
+			this.dsth.setValue(hw, typeof dst[1] != "undefined" ? dst[1] : 0);
+			this.dstl.setValue(hw, typeof dst[0] != "undefined" ? dst[0] : 0);
+		}
+	}
+
+	export class Latsna implements Instruction {
+		constructor(
+			public token: Token | null,
+			private src: Value,
+			private dstl: WritableValue,
+			private dsth: WritableValue
+		) {}
+
+		exec(hw: Hardware) {
+			const a = BigInt.fromInt32(this.src.getValue(hw));
+			const b = BigInt.fromInt32(this.dstl.getValue(hw));
+			const dst = a.times(b).toInt32Array(2);
 			this.dsth.setValue(hw, typeof dst[1] != "undefined" ? dst[1] : 0);
 			this.dstl.setValue(hw, typeof dst[0] != "undefined" ? dst[0] : 0);
 		}

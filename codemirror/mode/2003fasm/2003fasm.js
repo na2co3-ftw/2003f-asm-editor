@@ -3,7 +3,7 @@ import "codemirror/addon/mode/simple";
 
 const MNEMONICS = [
 	"krz", "malkrz", "inj",
-	"ata", "nta", "lat",
+	"ata", "nta", "lat", "latsna",
 	"ada", "ekc", "dal", "nac",
 	"dto", "dro", "dtosna",
 	"fi",
