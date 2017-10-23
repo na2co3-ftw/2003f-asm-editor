@@ -4,7 +4,8 @@
   "description": "",
   "main": "",
   "scripts": {
-    "build": "webpack --colors"
+    "build": "webpack --config webpack.config.js --env.NODE_ENV=debug --colors",
+    "build:prod": "webpack --config webpack.config.js --env.NODE_ENV=production --colors"
   },
   "keywords": [],
   "author": "",
@@ -15,6 +16,7 @@
     "raw-loader": "^0.5.1",
     "ts-loader": "^2.3.1",
     "typescript": "^2.4.2",
+    "uglifyjs-webpack-plugin": "^1.0.0-rc.0",
     "webpack": "^3.3.0"
   },
   "dependencies": {
