@@ -23,7 +23,20 @@ interface CodeMirrorProps {
 export default class CodeMirrorComponent extends React.Component<CodeMirrorProps> {
 	private el: HTMLElement;
 	private editor: CodeMirror.Editor;
+	private acceptEvents = false;
 	private textMarkers: CodeMirror.TextMarker[] = [];
+
+	constructor(props) {
+		super(props);
+
+		this.onChange = this.onChange.bind(this);
+	}
+
+	private onChange(instance: CodeMirror.Editor, change: CodeMirror.EditorChangeLinkedList) {
+		if (this.acceptEvents && this.props.onChange) {
+			this.props.onChange(instance, change);
+		}
+	}
 
 	componentDidMount(): void {
 		this.editor = CodeMirror(this.el, this.props.option);
@@ -31,13 +44,15 @@ export default class CodeMirrorComponent extends React.Component<CodeMirrorProps
 		if (this.props.value) {
 			this.editor.setValue(this.props.value);
 		}
+		this.editor.on("change", this.onChange);
 
-		if (this.props.onChange) {
-			this.editor.on("change", this.props.onChange);
-		}
+		this.acceptEvents = true;
 	}
 
 	componentWillReceiveProps(nextProps: CodeMirrorProps) {
+		let valueChanged = false;
+		this.acceptEvents = false;
+
 		if (typeof nextProps.value != "undefined" && this.editor.getValue() != nextProps.value) {
 			const cursor = this.editor.getCursor();
 			const lastLine = this.editor.lastLine();
@@ -48,6 +63,7 @@ export default class CodeMirrorComponent extends React.Component<CodeMirrorProps
 				{line: lastLine, ch: lastCh}
 			);
 			this.editor.setCursor(cursor);
+			valueChanged = true;
 		}
 
 		if (nextProps.option) {
@@ -60,16 +76,18 @@ export default class CodeMirrorComponent extends React.Component<CodeMirrorProps
 		}
 
 		if (nextProps.markers) {
-			this.setMarkers(nextProps.markers);
+			this.setMarkers(nextProps.markers, valueChanged);
 		} else {
 			this.setMarkers([]);
 		}
+
+		this.acceptEvents = true;
 	}
 
-	private setMarkers(markers: MarkerInfo[]) {
+	private setMarkers(markers: MarkerInfo[], forceUpdate: boolean = false) {
 		for (let i = 0; i < markers.length; i++) {
 			if (this.props.markers && this.props.markers[i]) {
-				if (isEqual(this.props.markers[i], markers[i])) {
+				if (isEqual(this.props.markers[i], markers[i]) && !forceUpdate) {
 					continue;
 				} else {
 					this.textMarkers[i].clear();

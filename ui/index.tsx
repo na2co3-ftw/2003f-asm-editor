@@ -1,10 +1,11 @@
 import React = require("react");
 import ReactDOM = require("react-dom");
 
-import Editor, {MarkerInfo} from "./editor";
+import Editor, {MarkerInfoM} from "./editor";
 import HardwareState from "./hardware-state";
 
 import {Hardware} from "../2003fasm/execute";
+import {Token} from "../2003fasm/types";
 
 const TICK_TIME = 50;
 
@@ -31,7 +32,7 @@ function Header() {
 
 interface AppState {
 	liparxe: boolean;
-	machine: Hardware;
+	// machine: Hardware;
 	// timeOutHandler: number | null;
 	executing: boolean;
 	pausing: boolean;
@@ -39,6 +40,7 @@ interface AppState {
 
 class App extends React.Component<{}, AppState> {
 	private editor: Editor;
+	private machine: Hardware = new Hardware();
 	private timeOutHandler: number | null = null;
 
 	constructor(props) {
@@ -46,7 +48,6 @@ class App extends React.Component<{}, AppState> {
 
 		this.state = {
 			liparxe: false,
-			machine: new Hardware(),
 			executing: false,
 			pausing: false
 		};
@@ -74,14 +75,16 @@ class App extends React.Component<{}, AppState> {
 		this.setState({liparxe: e.target.checked});
 	}
 
-	private start() {
+	private start(): boolean {
 		const program = this.editor.getProgram();
 		if (program == null) {
-			return;
+			return false;
 		}
-		let machine = new Hardware();
-		machine.load(program);
-		this.setState({machine, executing: true});
+		this.machine = new Hardware();
+		this.machine.load(program);
+		// this.forceUpdate();
+		this.setState({executing: true});
+		return true;
 	}
 
 	private clearTimeout() {
@@ -94,7 +97,9 @@ class App extends React.Component<{}, AppState> {
 	private execute() {
 		this.clearTimeout();
 		if (!this.state.executing) {
-			this.start();
+			if (!this.start()) {
+				return;
+			}
 		}
 		this.timeOutHandler = setTimeout(this.executeTick, TICK_TIME);
 		this.setState({pausing: false});
@@ -102,9 +107,8 @@ class App extends React.Component<{}, AppState> {
 
 	private executeTick() {
 		this.timeOutHandler = null;
-		let machine = this.state.machine;
-		const continuing = machine.execOne();
-		this.setState({machine});
+		const continuing = this.machine.execOne();
+		this.forceUpdate();
 		if (continuing) {
 			this.timeOutHandler = setTimeout(this.executeTick, TICK_TIME);
 		} else {
@@ -124,28 +128,40 @@ class App extends React.Component<{}, AppState> {
 
 	private step() {
 		if (!this.state.executing) {
-			this.start();
+			if (!this.start()) {
+				return;
+			}
 			this.setState({pausing: true});
 		} else {
-			let machine = this.state.machine;
-			machine.execOne();
-			this.setState({machine});
+			this.machine.execOne();
+			this.forceUpdate();
+		}
+		const nxToken = this.getCurrentNXToken();
+		if (nxToken != null) {
+			this.editor.showFile(nxToken.file);
 		}
 	}
 
+	private getCurrentNXToken(): Token | null {
+		const _inst = this.machine.program.readNX(this.machine.cpu.nx);
+		if (_inst != null) {
+			const [_, inst] = _inst;
+			return inst.token;
+		}
+		return null;
+	}
+
 	render() {
-		const markers: MarkerInfo[] = [];
+		const markers: MarkerInfoM[] = [];
 		if (this.state.executing) {
-			const _inst = this.state.machine.program.readNX(this.state.machine.cpu.nx);
-			if (_inst != null) {
-				const [_, inst] = _inst;
-				if (inst.token != null) {
-					markers.push({
-						from: {line: inst.token.row, ch: inst.token.column},
-						to: {line: inst.token.row, ch: inst.token.column + inst.token.text.length},
-						options: {className: "CodeMirror-pointer-nx"}
-					});
-				}
+			const nxToken = this.getCurrentNXToken();
+			if (nxToken != null) {
+				markers.push({
+					file: nxToken.file,
+					from: {line: nxToken.row, ch: nxToken.column},
+					to: {line: nxToken.row, ch: nxToken.column + nxToken.text.length},
+					options: {className: "CodeMirror-pointer-nx"}
+				});
 			}
 		}
 
@@ -188,7 +204,7 @@ class App extends React.Component<{}, AppState> {
 					disabled={this.state.executing && !this.state.pausing}
 				>ステップ実行</button>
 
-				<HardwareState machine={this.state.machine}/>
+				<HardwareState machine={this.machine}/>
 			</div>
 		);
 	}

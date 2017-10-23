@@ -10,10 +10,10 @@ import "codemirror/addon/lint/lint.css";
 
 import "../codemirror/mode/2003fasm/2003fasm";
 
-import {fullParse} from "../2003fasm/parse";
-import {Program} from "../2003fasm/linker";
-import {ParseError} from "../2003fasm/types";
+import CachedCompiler, {Program, SourceFile} from "./cached-compiler";
+import EditorTab from "./editor-tab";
 
+const DEFAULT_ASM_NAME = "fib_non_recursive";
 const DEFAULT_ASM = `'c'i    
 nta f5 4   krz f5@ 12    
 nta f5 4   inj f5@ xx fib1    ata f5 8
@@ -34,24 +34,24 @@ krz f0 f1    l' ka
 krz xx f5@
 `;
 
-export {MarkerInfo};
+export interface MarkerInfoM extends MarkerInfo {
+	file: string;
+}
 
 interface EditorProps {
-	markers: MarkerInfo[]
+	markers: MarkerInfoM[]
 }
 
 interface EditorState {
-	source: string;
-	// parsedSource: string;
-	// parsedProgram: Program | null;
+	fileId: number;
+	sources: SourceFile[];
 	parseErrors: string;
 }
 
 export default class Editor extends React.Component<EditorProps, EditorState> {
 	private cm: CodeMirrorComponent;
 	private cmOption: CodeMirror.EditorConfiguration;
-	private parsedSource: string;
-	private parsedProgram: Program | null;
+	private parser: CachedCompiler;
 
 	constructor(props) {
 		super(props);
@@ -64,7 +64,11 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 			// gutters: ["CodeMirror-lint-markers"],
 			lint: {
 				getAnnotations: (newSource) => {
-					this.parse(newSource);
+					const sources = this.state.sources.slice(0);
+					sources[this.state.fileId] = Object.assign({}, sources[this.state.fileId], {
+						source: newSource
+					});
+					this.parse(sources);
 
 					// console.log(p.tokens.map(t => t.toString()));
 					// asm.load(source);
@@ -86,55 +90,112 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 				hasGutters: true
 			}
 		};
+		this.parser = new CachedCompiler();
 
 		this.state = {
-			source: DEFAULT_ASM,
+			fileId: 0,
+			sources: [{name: DEFAULT_ASM_NAME, source:DEFAULT_ASM}],
 			parseErrors: ""
 		};
 
-		this.sourceChange = this.sourceChange.bind(this);
+		this.editorChange = this.editorChange.bind(this);
 		this.importChange = this.importChange.bind(this);
+		this.newTab = this.newTab.bind(this);
+		this.selectTab = this.selectTab.bind(this);
+		this.closeTab = this.closeTab.bind(this);
+		this.renameFile = this.renameFile.bind(this);
 	}
 
-	private sourceChange(editor: CodeMirror.Editor) {
-		this.setState({source: editor.getValue()});
+	private editorChange(editor: CodeMirror.Editor) {
+		const value = editor.getValue();
+		this.setState((state: EditorState) => {
+			const sources = state.sources.slice(0);
+			sources[state.fileId] = Object.assign({}, sources[state.fileId], {
+				source: value
+			});
+			return {sources};
+		});
 	}
 
 	private importChange(e: React.ChangeEvent<HTMLInputElement>) {
 		for (const file of Array.from(e.target.files!)) {
 			const reader = new FileReader();
 			reader.addEventListener("load", e => {
-				let contents = (e.target as FileReader).result;
-				this.setState({source: contents});
+				let source = (e.target as FileReader).result;
+				this.setState((state: EditorState) => {
+					const name = this.uniqueFileName(state.sources.length, file.name, state.sources);
+					return {sources: [...state.sources, {name: name, source: source}]};
+				});
 			});
 			reader.readAsText(file);
 		}
 	}
 
-	getProgram(): Program | null {
-		this.parse(this.state.source);
-		return this.parsedProgram;
+	private newTab() {
+		this.setState((state: EditorState) => {
+			const name = this.uniqueFileName(state.sources.length, "untitled", state.sources);
+			return {sources: [...state.sources, {name: name, source: ""}]};
+		});
 	}
 
-	private parse(newSource) {
-		if (newSource == this.parsedSource) {
+	private selectTab(id: number) {
+		this.setState(() => ({fileId: id}));
+	}
+
+	private closeTab(id: number){
+		this.setState((state: EditorState) => {
+			if (state.sources.length <= 1) {
+				return {};
+			}
+			const sources = state.sources.slice(0);
+			sources.splice(id, 1);
+			let fileId = state.fileId;
+			if (fileId >= sources.length) {
+				fileId--;
+			}
+			return {sources, fileId};
+		});
+	}
+
+	private renameFile(id: number, name: string) {
+		if (name.search(/\S/) < 0) {
 			return;
 		}
+		this.setState((state: EditorState) => {
+			const sources = state.sources.slice(0);
+			sources[id].name = this.uniqueFileName(id, name, sources);
+			return {sources};
+		});
+	}
 
-		try {
-			const program = Program.link([fullParse(newSource)]);
-			this.parsedSource = newSource;
-			this.parsedProgram = program;
-			this.setState({parseErrors: ""});
-		} catch (e) {
-			if (e instanceof ParseError) {
-				this.parsedSource = newSource;
-				this.parsedProgram = null;
-				this.setState({parseErrors: e.message});
-				return;
+	private uniqueFileName(id: number, name: string, sources: SourceFile[]) {
+		let appendNumber = 1;
+		while (true) {
+			const newName = name + (appendNumber == 1 ? "" : "_" + appendNumber);
+			if (sources.every((source: SourceFile, _id: number) =>
+				_id == id || source.name != newName)
+			) {
+				return newName;
 			}
-			throw e;
+			appendNumber++;
 		}
+	}
+
+	private parse(sources: SourceFile[]): Program | null {
+		const program = this.parser.compile(sources);
+		this.setState({parseErrors: this.parser.getErrors().join(", ")});
+		return program;
+	}
+
+	showFile(name: string) {
+		const id = this.state.sources.findIndex(source => source.name == name);
+		if (id >= 0) {
+			this.setState({fileId: id});
+		}
+	}
+
+	getProgram(): Program | null {
+		return this.parse(this.state.sources);
 	}
 
 	refresh() {
@@ -142,17 +203,34 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 	}
 
 	render() {
+		const currentFileName = this.state.sources[this.state.fileId].name;
+
 		return (
 			<div>
-				ファイルから読み込む: <input type="file" onChange={this.importChange}/>
+				ファイルから読み込む: <input type="file" onChange={this.importChange} multiple/><br/>
+				<div>
+					{this.state.sources.map((source, id) =>
+						<EditorTab
+							key={id}
+							id={id}
+							name={source.name}
+							active={id == this.state.fileId}
+							closable={this.state.sources.length != 1}
+							onClick={this.selectTab}
+							onClose={this.closeTab}
+							onRename={this.renameFile}
+						/>
+					)}
+					<span className="editor-tab" onClick={this.newTab}>+</span>
+				</div>
+
 				<CodeMirrorComponent
-					value={this.state.source}
+					value={this.state.sources[this.state.fileId].source}
 					option={this.cmOption}
-					markers={this.props.markers}
-					onChange={this.sourceChange}
+					markers={this.props.markers.filter(marker => marker.file == currentFileName)}
+					onChange={this.editorChange}
 					ref={(el => this.cm = el!)}
 				/>
-
 				<p className="errors">{this.state.parseErrors}</p>
 			</div>
 		);

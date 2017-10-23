@@ -8,12 +8,12 @@ export interface ParsedFile {
 	xokList: string[];
 }
 
-export function fullParse(str: string): ParsedFile {
-	const ts = tokenize(str.replace(/\r\n?/g, "\n"));
+export function fullParse(str: string, file: string = ""): ParsedFile {
+	const ts = tokenize(str.replace(/\r\n?/g, "\n"), file);
 	return toInstructions(beautify(ts));
 }
 
-function tokenize(source: string): Token[] {
+function tokenize(source: string, file: string = ""): Token[] {
 	let pos = 0;
 	let row = 0;
 	let column = 0;
@@ -36,11 +36,11 @@ function tokenize(source: string): Token[] {
 
 		let char = source[pos];
 		if (char == "@") {
-			tokens.push(new Token("@", row, column));
+			tokens.push(new Token("@", row, column, file));
 			advance();
 			continue;
 		} else if (char == "+") {
-			tokens.push(new Token("+", row, column));
+			tokens.push(new Token("+", row, column, file));
 			advance();
 			continue;
 		}
@@ -56,7 +56,7 @@ function tokenize(source: string): Token[] {
 			text += char;
 			advance();
 		}
-		tokens.push(new Token(text, startRow, startColumn));
+		tokens.push(new Token(text, startRow, startColumn, file));
 	}
 	return tokens;
 

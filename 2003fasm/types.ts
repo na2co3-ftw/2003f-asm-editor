@@ -2,7 +2,12 @@ import {Hardware} from "./execute";
 import {BigInt} from "./bigint";
 
 export class Token {
-	constructor(public text: string, public row: number, public column: number) {}
+	constructor(
+		public text: string,
+		public row: number,
+		public column: number,
+		public file: string = ""
+	) {}
 }
 
 export enum Register {
