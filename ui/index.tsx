@@ -133,8 +133,11 @@ class App extends React.Component<{}, AppState> {
 			}
 			this.setState({pausing: true});
 		} else {
-			this.machine.execOne();
+			const continuing = this.machine.execOne();
 			this.forceUpdate();
+			if (!continuing) {
+				this.setState({executing: false, pausing: false});
+			}
 		}
 		const nxToken = this.getCurrentNXToken();
 		if (nxToken != null) {

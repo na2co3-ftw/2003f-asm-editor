@@ -76,11 +76,17 @@ export class Hardware {
 
 	execOne(): boolean {
 		const instruction = this.updateXXAndGetInstruction();
-		if (instruction instanceof Instruction.TERMINATE) {
-			return this.finalize();
-		}
 		instruction.exec(this);
 		this.updateNX();
+
+		if (this.cpu.nx == outermostRetAddress) {
+			return this.finalize();
+		} else if (this.cpu.nx == debugOutputAddress) {
+			const value = new Value.RPlusNum(Register.f5, 4).getValue(this);
+			this.log.push(value.toString());
+			this.cpu.xx = new Value.RPlusNum(Register.f5, 0).getValue(this);
+			this.updateNX();
+		}
 		return true;
 	}
 
@@ -102,15 +108,7 @@ export class Hardware {
 			this.cpu.xx = newXX;
 			return instruction;
 		} else {
-			if (this.cpu.nx == outermostRetAddress) {
-				return new Instruction.TERMINATE();
-			} else if (this.cpu.nx == debugOutputAddress) {
-				const value = new Value.RPlusNum(Register.f5, 4).getValue(this);
-				this.log.push(value.toString());
-				return new Instruction.Krz(null, new Value.RPlusNum(Register.f5, 0), new Value.R(Register.xx));
-			} else {
-				throw new RuntimeError("nx has an invalid address " + this.cpu.nx);
-			}
+			throw new RuntimeError("nx has an invalid address " + this.cpu.nx);
 		}
 	}
 }

@@ -100,14 +100,6 @@ export interface Instruction {
 }
 
 export namespace Instruction {
-	export class TERMINATE implements Instruction {
-		token = null;
-
-		exec(hw: Hardware) {
-			throw new RuntimeError("cannot happen");
-		}
-	}
-
 	abstract class BinaryInstruction implements Instruction {
 		constructor(public token: Token | null, private src: Value, private dst: WritableValue) {}
 
