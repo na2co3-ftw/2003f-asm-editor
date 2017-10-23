@@ -122,7 +122,7 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 		for (const file of Array.from(e.target.files!)) {
 			const reader = new FileReader();
 			reader.addEventListener("load", e => {
-				let source = (e.target as FileReader).result;
+				let source = (e.target as FileReader).result.replace(/\r\n?/g, "\n");
 				this.setState((state: EditorState) => {
 					const name = this.uniqueFileName(state.sources.length, file.name, state.sources);
 					return {sources: [...state.sources, {name: name, source: source}]};
