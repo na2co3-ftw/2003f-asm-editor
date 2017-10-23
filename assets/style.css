@@ -16,6 +16,32 @@ body {
 	src: url(./jietoden_liparxe.woff);
 }
 
+.contents {
+	position: relative;
+}
+
+.editor-pain {
+	margin-right: 570px;
+}
+
+.interpreter-pain {
+	position: absolute;
+	top: 0;
+	right: 0;
+	width: 550px;
+}
+
+@media (max-width: 960px){
+	.editor-pain {
+		margin-right: 0;
+	}
+
+	.interpreter-pain {
+		position: static;
+		width: auto;
+	}
+}
+
 .CodeMirror {
 	font-size: 14px;
 	border: 1px solid black;
@@ -35,10 +61,6 @@ body {
 .liparxe .lineparine.monospace,
 .liparxe .CodeMirror {
 	font-family: "jietoden", monospace;
-}
-
-.clear {
-	clear: both;
 }
 
 .editor-tab {

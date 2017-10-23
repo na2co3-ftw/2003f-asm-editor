@@ -39,6 +39,7 @@ export interface MarkerInfoM extends MarkerInfo {
 }
 
 interface EditorProps {
+	className? : string;
 	markers: MarkerInfoM[]
 }
 
@@ -206,8 +207,8 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 		const currentFileName = this.state.sources[this.state.fileId].name;
 
 		return (
-			<div>
-				ファイルから読み込む: <input type="file" onChange={this.importChange} multiple/><br/>
+			<div className={this.props.className || ""}>
+				ファイルを開く: <input type="file" onChange={this.importChange} multiple/><br/>
 				<div>
 					{this.state.sources.map((source, id) =>
 						<EditorTab

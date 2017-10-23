@@ -180,34 +180,39 @@ class App extends React.Component<{}, AppState> {
 					</label>
 				</p>
 
-				<Editor
-					ref={el => this.editor = el!}
-					markers={markers}
-				/>
+				<div className="contents">
+					<Editor
+						className="editor-pain"
+						ref={el => this.editor = el!}
+						markers={markers}
+					/>
 
-				<button
-					onClick={this.execute}
-					disabled={this.state.executing && !this.state.pausing}
-				>実行</button>
+					<div className="interpreter-pain">
+						<button
+							onClick={this.execute}
+							disabled={this.state.executing && !this.state.pausing}
+						>実行</button>
 
-				<button
-					onClick={this.pause}
-					disabled={!this.state.executing || this.state.pausing}
-				>中断</button>
+						<button
+							onClick={this.pause}
+							disabled={!this.state.executing || this.state.pausing}
+						>中断</button>
 
-				<button
-					onClick={this.stop}
-					disabled={!this.state.executing}
-				>終了</button>
+						<button
+							onClick={this.stop}
+							disabled={!this.state.executing}
+						>終了</button>
 
-				{" | "}
+						{" | "}
 
-				<button
-					onClick={this.step}
-					disabled={this.state.executing && !this.state.pausing}
-				>ステップ実行</button>
+						<button
+							onClick={this.step}
+							disabled={this.state.executing && !this.state.pausing}
+						>ステップ実行</button>
 
-				<HardwareState machine={this.machine}/>
+						<HardwareState machine={this.machine}/>
+					</div>
+				</div>
 			</div>
 		);
 	}
