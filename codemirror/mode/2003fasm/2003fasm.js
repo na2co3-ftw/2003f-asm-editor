@@ -2,10 +2,10 @@ import * as CodeMirror from "codemirror";
 import "codemirror/addon/mode/simple";
 
 const MNEMONICS = [
-	"krz", "malkrz", "inj",
+	"k[rR]z", "malk[rR]z", "inj",
 	"ata", "nta", "lat", "latsna",
 	"ada", "ekc", "dal", "nac",
-	"dto", "dro", "dtosna",
+	"dto", "d[rR]o", "dtosna",
 	"fi",
 	"fen"
 ];

@@ -104,6 +104,7 @@ function beautify(tokens: Token[]): Token[] {
 
 const RL = {
 	"krz": Instruction.Krz,
+	"kRz": Instruction.Krz,
 	"ata": Instruction.Ata,
 	"nta": Instruction.Nta,
 	"ada": Instruction.Ada,
@@ -111,8 +112,10 @@ const RL = {
 	"dal": Instruction.Dal,
 	"dto": Instruction.Dto,
 	"dro": Instruction.Dro,
+	"dRo": Instruction.Dro,
 	"dtosna": Instruction.Dtosna,
-	"malkrz": Instruction.MalKrz
+	"malkrz": Instruction.MalKrz,
+	"malkRz": Instruction.MalKrz
 };
 
 function toInstructions(tokens: Token[]): ParsedFile {
