@@ -5,7 +5,7 @@ import Editor, {MarkerInfoM} from "./editor";
 import HardwareState from "./hardware-state";
 
 import {Hardware} from "../2003fasm/execute";
-import {Token} from "../2003fasm/types";
+import {RuntimeError, Token} from "../2003fasm/types";
 
 const TICK_TIME = 50;
 
@@ -36,6 +36,7 @@ interface AppState {
 	// timeOutHandler: number | null;
 	executing: boolean;
 	pausing: boolean;
+	runtimeErrors: string;
 }
 
 class App extends React.Component<{}, AppState> {
@@ -49,7 +50,8 @@ class App extends React.Component<{}, AppState> {
 		this.state = {
 			liparxe: false,
 			executing: false,
-			pausing: false
+			pausing: false,
+			runtimeErrors: ""
 		};
 
 		this.liparxeChange = this.liparxeChange.bind(this);
@@ -83,7 +85,7 @@ class App extends React.Component<{}, AppState> {
 		this.machine = new Hardware();
 		this.machine.load(program);
 		// this.forceUpdate();
-		this.setState({executing: true});
+		this.setState({executing: true, runtimeErrors: ""});
 		return true;
 	}
 
@@ -107,13 +109,28 @@ class App extends React.Component<{}, AppState> {
 
 	private executeTick() {
 		this.timeOutHandler = null;
-		const continuing = this.machine.execOne();
-		this.forceUpdate();
+		const continuing = this.execOne();
 		if (continuing) {
 			this.timeOutHandler = setTimeout(this.executeTick, TICK_TIME);
 		} else {
 			this.setState({executing: false, pausing: false});
 		}
+	}
+
+	private execOne() {
+		let continuing = false;
+		let errors = "";
+		try {
+			continuing = this.machine.execOne();
+		} catch (e) {
+			if (e instanceof RuntimeError) {
+				continuing = false;
+				errors = e.message;
+			}
+		}
+		//this.forceUpdate();
+		this.setState({runtimeErrors: errors});
+		return continuing;
 	}
 
 	private pause() {
@@ -133,8 +150,7 @@ class App extends React.Component<{}, AppState> {
 			}
 			this.setState({pausing: true});
 		} else {
-			const continuing = this.machine.execOne();
-			this.forceUpdate();
+			const continuing = this.execOne();
 			if (!continuing) {
 				this.setState({executing: false, pausing: false});
 			}
@@ -209,6 +225,8 @@ class App extends React.Component<{}, AppState> {
 							onClick={this.step}
 							disabled={this.state.executing && !this.state.pausing}
 						>ステップ実行</button>
+
+						<p className="errors">{this.state.runtimeErrors}</p>
 
 						<HardwareState machine={this.machine}/>
 					</div>
