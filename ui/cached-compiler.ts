@@ -1,6 +1,6 @@
-import {fullParse, ParsedFile} from "../2003fasm/parse";
-import {Program} from "../2003fasm/linker";
-import {ParseError} from "../2003fasm/types";
+import {fullParse, ParsedFile} from "../2003lk/parse";
+import {Program} from "../2003lk/linker";
+import {ParseError} from "../2003lk/types";
 
 export {Program};
 

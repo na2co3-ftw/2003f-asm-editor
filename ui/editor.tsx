@@ -8,7 +8,7 @@ import "codemirror/addon/selection/active-line";
 import "codemirror/addon/lint/lint";
 import "codemirror/addon/lint/lint.css";
 
-import "../codemirror/mode/2003fasm/2003fasm";
+import "../codemirror/mode/2003lk/2003lk";
 
 import CachedCompiler, {Program, SourceFile} from "./cached-compiler";
 import EditorTab from "./editor-tab";
@@ -58,7 +58,7 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 		super(props);
 
 		this.cmOption = {
-			mode: "2003fasm",
+			mode: "2003lk",
 			theme: "neat",
 			styleActiveLine: true,
 			lineNumbers: true,

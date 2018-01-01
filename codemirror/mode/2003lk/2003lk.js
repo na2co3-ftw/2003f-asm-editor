@@ -29,7 +29,7 @@ const BUILTINFUNCTIONS = [
 	"3126834864"
 ];
 
-CodeMirror.defineSimpleMode("2003fasm", {
+CodeMirror.defineSimpleMode("2003lk", {
 	start: [
 		{regex: new RegExp(`(${MNEMONICS.join("|")})(?![\\w'_-])`), token: "keyword"},
 		{regex: new RegExp(`(${CONDITIONS.join("|")})(?![\\w'_-])`), token: "builtin"},

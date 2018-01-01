@@ -4,8 +4,8 @@ import ReactDOM = require("react-dom");
 import Editor, {MarkerInfoM} from "./editor";
 import HardwareState from "./hardware-state";
 
-import {Hardware} from "../2003fasm/execute";
-import {RuntimeError, Token} from "../2003fasm/types";
+import {Hardware} from "../2003lk/execute";
+import {RuntimeError, Token} from "../2003lk/types";
 
 const TICK_TIME = 50;
 

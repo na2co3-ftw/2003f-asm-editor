@@ -10,7 +10,7 @@ export interface ParsedFile {
 
 export function fullParse(str: string, file: string = ""): ParsedFile {
 	const ts = tokenize(str.replace(/\r\n?/g, "\n"), file);
-	return toInstructions(beautify(ts));
+	return parse(associateExpr(ts));
 }
 
 function tokenize(source: string, file: string = ""): Token[] {
@@ -75,7 +75,7 @@ function isWhiteSpace(char: string): boolean {
 	return char.search(/\s/) >= 0;
 }
 
-function beautify(tokens: Token[]): Token[] {
+function associateExpr(tokens: Token[]): Token[] {
 	let ret: Token[] = [];
 	for (let i = 0; i < tokens.length; i++) {
 		if (tokens[i].text == "+") {
@@ -102,7 +102,7 @@ function beautify(tokens: Token[]): Token[] {
 	return ret;
 }
 
-const RL = {
+const BINARY_INSTRUCTIONS = {
 	"krz": Instruction.Krz,
 	"kRz": Instruction.Krz,
 	"ata": Instruction.Ata,
@@ -118,7 +118,7 @@ const RL = {
 	"malkRz": Instruction.MalKrz
 };
 
-function toInstructions(tokens: Token[]): ParsedFile {
+function parse(tokens: Token[]): ParsedFile {
 	let isCI = false;
 	let kueList: string[] = [];
 	let xokList: string[] = [];
@@ -140,10 +140,10 @@ function toInstructions(tokens: Token[]): ParsedFile {
 		} else if (token == "nac" && i + 1 < tokens.length) {
 			const dst = parseL(tokens[i + 1]);
 			pushInstruction(new Instruction.Dal(tokens[i], new Value.Pure(0), dst));
-		} else if (RL.hasOwnProperty(token) && i + 2 < tokens.length) {
+		} else if (BINARY_INSTRUCTIONS.hasOwnProperty(token) && i + 2 < tokens.length) {
 			const src = isCI ? parseR(tokens[i + 2]) : parseR(tokens[i + 1]);
 			const dst = isCI ? parseL(tokens[i + 1]) : parseL(tokens[i + 2]);
-			pushInstruction(new RL[token](tokens[i], src, dst));
+			pushInstruction(new BINARY_INSTRUCTIONS[token](tokens[i], src, dst));
 			i += 2;
 		} else if (token == "lat" && i + 3 < tokens.length) {
 			const src = isCI ? parseR(tokens[i + 3]) : parseR(tokens[i + 1]);
