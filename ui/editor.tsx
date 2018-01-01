@@ -9,6 +9,7 @@ import "codemirror/addon/lint/lint";
 import "codemirror/addon/lint/lint.css";
 
 import "../codemirror/mode/2003lk/2003lk";
+import "../codemirror/mode/tinka/tinka";
 
 import CachedCompiler, {Program, SourceFile} from "./cached-compiler";
 import EditorTab from "./editor-tab";
@@ -51,51 +52,45 @@ interface EditorState {
 
 export default class Editor extends React.Component<EditorProps, EditorState> {
 	private cm: CodeMirrorComponent;
-	private cmOption: CodeMirror.EditorConfiguration;
+	private lintOptions: CodeMirror.LintOptions;
 	private parser: CachedCompiler;
 
 	constructor(props) {
 		super(props);
 
-		this.cmOption = {
-			mode: "2003lk",
-			theme: "neat",
-			styleActiveLine: true,
-			lineNumbers: true,
-			// gutters: ["CodeMirror-lint-markers"],
-			lint: {
-				getAnnotations: (newSource) => {
-					const sources = this.state.sources.slice(0);
-					sources[this.state.fileId] = Object.assign({}, sources[this.state.fileId], {
-						source: newSource
-					});
-					this.parse(sources);
+		this.lintOptions = {
+			getAnnotations: (newSource) => {
+				const sources = this.state.sources.slice(0);
+				sources[this.state.fileId] = Object.assign({}, sources[this.state.fileId], {
+					source: newSource
+				});
+				this.parse(sources);
 
-					// console.log(p.tokens.map(t => t.toString()));
-					// asm.load(source);
-					// const errors = asm.errors.map(parseErrorToLintMarker("error"));
-					// const warnings = asm.warnings.map(parseErrorToLintMarker("warning"));
-					// return errors.concat(warnings);
-					//
-					// function parseErrorToLintMarker(severity) {
-					// 	return error => ({
-					// 		message: error.message,
-					// 		severity: severity,
-					// 		from: CodeMirror.Pos(error.token.lineNumber, error.token.columnNumber),
-					// 		to: CodeMirror.Pos(error.token.lineNumber, error.token.columnNumber + error.token.text.length)
-					// 	});
-					// }
-					return [];
-				},
-				async: false,
-				hasGutters: true
-			}
+				// console.log(p.tokens.map(t => t.toString()));
+				// asm.load(source);
+				// const errors = asm.errors.map(parseErrorToLintMarker("error"));
+				// const warnings = asm.warnings.map(parseErrorToLintMarker("warning"));
+				// return errors.concat(warnings);
+				//
+				// function parseErrorToLintMarker(severity) {
+				// 	return error => ({
+				// 		message: error.message,
+				// 		severity: severity,
+				// 		from: CodeMirror.Pos(error.token.lineNumber, error.token.columnNumber),
+				// 		to: CodeMirror.Pos(error.token.lineNumber, error.token.columnNumber + error.token.text.length)
+				// 	});
+				// }
+				return [];
+			},
+			async: false,
+			hasGutters: true
 		};
+
 		this.parser = new CachedCompiler();
 
 		this.state = {
 			fileId: 0,
-			sources: [{name: DEFAULT_ASM_NAME, source:DEFAULT_ASM}],
+			sources: [{name: DEFAULT_ASM_NAME, source:DEFAULT_ASM, language: "2003lk"}],
 			parseErrors: ""
 		};
 
@@ -125,7 +120,11 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 				let source = (e.target as FileReader).result.replace(/\r\n?/g, "\n");
 				this.setState((state: EditorState) => {
 					const name = this.uniqueFileName(state.sources.length, file.name, state.sources);
-					return {sources: [...state.sources, {name: name, source: source}]};
+					return {sources: [...state.sources, {
+						name,
+						source,
+						language: name.endsWith(".tinka") ? "tinka" : "2003lk"
+					}]};
 				});
 			});
 			reader.readAsText(file);
@@ -135,7 +134,7 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 	private newTab() {
 		this.setState((state: EditorState) => {
 			const name = this.uniqueFileName(state.sources.length, "untitled", state.sources);
-			return {sources: [...state.sources, {name: name, source: ""}]};
+			return {sources: [...state.sources, {name: name, source: "", language: "2003lk"}]};
 		});
 	}
 
@@ -164,15 +163,26 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 		}
 		this.setState((state: EditorState) => {
 			const sources = state.sources.slice(0);
+			if (name.endsWith(".tinka")) {
+				sources[id].language = "tinka";
+			} else {
+				sources[id].language = "2003lk";
+			}
 			sources[id].name = this.uniqueFileName(id, name, sources);
 			return {sources};
 		});
 	}
 
 	private uniqueFileName(id: number, name: string, sources: SourceFile[]) {
+		const i = name.lastIndexOf(".");
+		let ext = "";
+		if (i >= 0) {
+			ext = name.substr(i);
+			name = name.substr(0, i);
+		}
 		let appendNumber = 1;
 		while (true) {
-			const newName = name + (appendNumber == 1 ? "" : "_" + appendNumber);
+			const newName = name + (appendNumber == 1 ? "" : "_" + appendNumber) + ext;
 			if (sources.every((source: SourceFile, _id: number) =>
 				_id == id || source.name != newName)
 			) {
@@ -204,7 +214,15 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 	}
 
 	render() {
-		const currentFileName = this.state.sources[this.state.fileId].name;
+		const currentFile = this.state.sources[this.state.fileId];
+		const cmOption = {
+			mode: currentFile.language,
+			theme: "neat",
+			styleActiveLine: true,
+			lineNumbers: true,
+			// gutters: ["CodeMirror-lint-markers"],
+			lint: this.lintOptions
+		}
 
 		return (
 			<div className={this.props.className || ""}>
@@ -227,8 +245,8 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 
 				<CodeMirrorComponent
 					value={this.state.sources[this.state.fileId].source}
-					option={this.cmOption}
-					markers={this.props.markers.filter(marker => marker.file == currentFileName)}
+					option={cmOption}
+					markers={this.props.markers.filter(marker => marker.file == currentFile.name)}
 					onChange={this.editorChange}
 					ref={(el => this.cm = el!)}
 				/>

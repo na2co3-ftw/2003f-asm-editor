@@ -71,7 +71,7 @@ export default class CodeMirrorComponent extends React.Component<CodeMirrorProps
 				if (this.props.option && isEqual(this.props.option[key], nextProps.option[key])) {
 					continue;
 				}
-				this.editor.setOption(key, nextProps[key]);
+				this.editor.setOption(key, nextProps.option[key]);
 			}
 		}
 

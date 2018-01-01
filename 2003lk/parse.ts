@@ -1,11 +1,16 @@
 import {Cond, Instruction, ParseError, Register, REGISTER_RESERVED, Token, Value, WritableValue} from "./types";
 
-export type LabeledInstructions = {instruction: Instruction, labels: string[]}[]
+export type LabeledInstruction = {
+	instruction: Instruction,
+	labels: string[],
+	token?: Token;
+}
 
 export interface ParsedFile {
-	instructions: LabeledInstructions;
+	instructions: LabeledInstruction[];
 	kueList: string[];
 	xokList: string[];
+	hasMain: boolean;
 }
 
 export function fullParse(str: string, file: string = ""): ParsedFile {
@@ -123,9 +128,9 @@ function parse(tokens: Token[]): ParsedFile {
 	let kueList: string[] = [];
 	let xokList: string[] = [];
 	let labels: string[] = [];
-	let instructions: LabeledInstructions = [];
-	function pushInstruction(instruction: Instruction) {
-		instructions.push({instruction, labels});
+	let instructions: LabeledInstruction[] = [];
+	function pushInstruction(instruction: Instruction, i: number) {
+		instructions.push({instruction, labels, token: tokens[i]});
 		labels = [];
 	}
 
@@ -136,37 +141,37 @@ function parse(tokens: Token[]): ParsedFile {
 		} else if (token == "'i'c") {
 			isCI = false;
 		} else if (token == "fen") {
-			pushInstruction(new Instruction.Krz(tokens[i], new Value.R(Register.f0), new Value.R(Register.f0)));
+			pushInstruction(new Instruction.Krz(new Value.R(Register.f0), new Value.R(Register.f0)), i);
 		} else if (token == "nac" && i + 1 < tokens.length) {
 			const dst = parseL(tokens[i + 1]);
-			pushInstruction(new Instruction.Dal(tokens[i], new Value.Pure(0), dst));
+			pushInstruction(new Instruction.Dal(new Value.Pure(0), dst), i);
 		} else if (BINARY_INSTRUCTIONS.hasOwnProperty(token) && i + 2 < tokens.length) {
 			const src = isCI ? parseR(tokens[i + 2]) : parseR(tokens[i + 1]);
 			const dst = isCI ? parseL(tokens[i + 1]) : parseL(tokens[i + 2]);
-			pushInstruction(new BINARY_INSTRUCTIONS[token](tokens[i], src, dst));
+			pushInstruction(new BINARY_INSTRUCTIONS[token](src, dst), i);
 			i += 2;
 		} else if (token == "lat" && i + 3 < tokens.length) {
 			const src = isCI ? parseR(tokens[i + 3]) : parseR(tokens[i + 1]);
 			const dstl = isCI ? parseL(tokens[i + 1]) : parseL(tokens[i + 2]);
 			const dsth = isCI ? parseL(tokens[i + 2]) : parseL(tokens[i + 3]);
-			pushInstruction(new Instruction.Lat(tokens[i], src, dstl, dsth));
+			pushInstruction(new Instruction.Lat(src, dstl, dsth), i);
 			i += 3;
 		} else if (token == "latsna" && i + 3 < tokens.length) {
 			const src = isCI ? parseR(tokens[i + 3]) : parseR(tokens[i + 1]);
 			const dstl = isCI ? parseL(tokens[i + 1]) : parseL(tokens[i + 2]);
 			const dsth = isCI ? parseL(tokens[i + 2]) : parseL(tokens[i + 3]);
-			pushInstruction(new Instruction.Latsna(tokens[i], src, dstl, dsth));
+			pushInstruction(new Instruction.Latsna(src, dstl, dsth), i);
 			i += 3;
 		} else if (token == "fi" && i + 3 < tokens.length && Cond.hasOwnProperty(tokens[i + 3].text)) {
 			const a = parseR(tokens[i + 1]);
 			const b = parseR(tokens[i + 2]);
-			pushInstruction(new Instruction.Fi(tokens[i], a, b, Cond[tokens[i + 3].text]));
+			pushInstruction(new Instruction.Fi(a, b, Cond[tokens[i + 3].text]), i);
 			i += 3;
 		} else if (token == "inj" && i + 3 < tokens.length) {
 			const a = isCI ? parseR(tokens[i + 3]) : parseR(tokens[i + 1]);
 			const b = parseL(tokens[i + 2]);
 			const c = isCI ? parseL(tokens[i + 1]) : parseL(tokens[i + 3]);
-			pushInstruction(new Instruction.Inj(tokens[i], a, b, c));
+			pushInstruction(new Instruction.Inj(a, b, c), i);
 			i += 3;
 		} else if (token == "nll" && i + 1 < tokens.length) {
 			labels.push(parseLabel(tokens[i + 1]));
@@ -193,7 +198,7 @@ function parse(tokens: Token[]): ParsedFile {
 	if (labels.length != 0) {
 		throw new ParseError("nll must be followed by an instruction");
 	}
-	return {instructions, kueList, xokList};
+	return {instructions, kueList, xokList, hasMain: kueList.length == 0};
 }
 
 function parseRegister(token: string): Register {

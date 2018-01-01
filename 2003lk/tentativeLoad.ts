@@ -1,11 +1,17 @@
-import {Instruction, ParseError} from "./types";
+import {Instruction, ParseError, Token} from "./types";
 import {ParsedFile} from "./parse";
 
 export const MAX_SIZE = 65536;
 
+export interface LoadedInstruction {
+	next: number,
+	instruction: Instruction,
+	token?: Token
+}
+
 export class TentativeLoad {
 	constructor(
-		private tentativeAddresTable: {[address: number]: [number, Instruction]},
+		private tentativeAddresTable: {[address: number]: LoadedInstruction},
 		private labelTable: {[label: string]: number},
 		private xokList: string[],
 	) {}
@@ -23,7 +29,7 @@ export class TentativeLoad {
 		return null;
 	}
 
-	readNX(address: number): [number, Instruction] | null {
+	readNX(address: number): LoadedInstruction | null {
 		if (this.tentativeAddresTable.hasOwnProperty(address)) {
 			return this.tentativeAddresTable[address];
 		}
@@ -31,13 +37,17 @@ export class TentativeLoad {
 	}
 
 	static from(baseAddress: number, file: ParsedFile): TentativeLoad {
-		let tentativeAddressTable: {[address: number]: [number, Instruction]} = {};
+		let tentativeAddressTable: {[address: number]: LoadedInstruction} = {};
 		let labelTable: {[label: string]: number} = {};
 		let localAddress = 0;
-		for (let {instruction, labels} of file.instructions) {
+		for (let {instruction, labels, token} of file.instructions) {
 			const address = (baseAddress + localAddress) | 0;
 			const next = localAddress + Math.floor(Math.random() * 4) + 1;
-			tentativeAddressTable[address] = [(baseAddress + next) | 0, instruction];
+			tentativeAddressTable[address] = {
+				next: (baseAddress + next) | 0,
+				instruction,
+				token
+			};
 			for (let label of labels) {
 				if (labelTable.hasOwnProperty(label)) {
 					throw new ParseError("duplicating local label: " + label);

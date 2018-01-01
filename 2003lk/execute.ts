@@ -1,4 +1,4 @@
-import {Instruction, Register, RuntimeError, Value} from "./types";
+import {Register, RuntimeError, Value} from "./types";
 import {Memory} from "./memory";
 import {initialAddress, Program} from "./linker";
 
@@ -44,6 +44,10 @@ export class CPU {
 	}
 }
 
+const enum ExecResult {
+	CONTINUE, END, BREAK
+}
+
 export class Hardware {
 	cpu: CPU;
 	memory: Memory;
@@ -61,7 +65,7 @@ export class Hardware {
 		this.load(program);
 		this.log = [];
 		const f = () => {
-			if (this.execOne()) {
+			if (this.execOneStep()) {
 				setTimeout(f, 0);
 			} else {
 				callback();
@@ -74,41 +78,47 @@ export class Hardware {
 		this.program = program;
 	}
 
-	execOne(): boolean {
-		const instruction = this.updateXXAndGetInstruction();
+	execOneStep(): boolean {
+		let ret = this.execOneInstruction(false);
+		while (ret == ExecResult.CONTINUE) {
+			ret = this.execOneInstruction(true);
+		}
+		return ret != ExecResult.END;
+	}
+
+	private execOneInstruction(breakNewStep: boolean): ExecResult {
+		const xxInst = this.program.readNX(this.cpu.nx);
+		if (xxInst == null) {
+			throw new RuntimeError("nx has an invalid address " + this.cpu.nx);
+		}
+		const {next, instruction, token} = xxInst;
+		if (breakNewStep && token) {
+			return ExecResult.BREAK;
+		}
+		
+		this.cpu.xx = next;
 		instruction.exec(this);
 		this.updateNX();
 
 		if (this.cpu.nx == outermostRetAddress) {
-			return this.finalize();
+			this.finalize();
+			return ExecResult.END
 		} else if (this.cpu.nx == debugOutputAddress) {
 			const value = new Value.RPlusNum(Register.f5, 4).getValue(this);
 			this.log.push(value.toString());
 			this.cpu.xx = new Value.RPlusNum(Register.f5, 0).getValue(this);
 			this.updateNX();
 		}
-		return true;
+		return ExecResult.CONTINUE;
 	}
 
-	finalize(): boolean {
+	finalize() {
 		if (this.cpu.f5 != initialF5) {
 			throw new RuntimeError(`f5 register was not preserved after the call. It should be in ${initialF5} but is actually in ${this.cpu.f5}`);
 		}
-		return false;
 	}
 
 	updateNX() {
 		this.cpu.nx = this.cpu.xx;
-	}
-
-	updateXXAndGetInstruction(): Instruction {
-		const xxInst = this.program.readNX(this.cpu.nx);
-		if (xxInst != null) {
-			const [newXX, instruction] = xxInst;
-			this.cpu.xx = newXX;
-			return instruction;
-		} else {
-			throw new RuntimeError("nx has an invalid address " + this.cpu.nx);
-		}
 	}
 }

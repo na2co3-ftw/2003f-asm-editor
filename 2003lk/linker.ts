@@ -1,6 +1,6 @@
-import {MAX_SIZE, TentativeLoad} from "./tentativeLoad";
+import {MAX_SIZE, TentativeLoad, LoadedInstruction} from "./tentativeLoad";
 import {ParsedFile} from "./parse";
-import {Instruction, ParseError} from "./types";
+import {ParseError} from "./types";
 
 export const initialAddress = 0x14830000|0;
 
@@ -10,7 +10,7 @@ export class Program {
 		private kueTable: {[label: string]: number}
 		) {}
 
-	readNX(address: number): [number, Instruction] | null {
+	readNX(address: number): LoadedInstruction | null {
 		const pageId = addressToPageId(address);
 		if (this.pages.hasOwnProperty(pageId)) {
 			return this.pages[pageId].readNX(address);
@@ -32,16 +32,16 @@ export class Program {
 		let kueTable: {[label: string]: number} = {};
 		files.forEach((file, index) => {
 			let pageId = index + 1;
-			if (file.kueList.length == 0) {
+			if (file.hasMain) {
 				pageId = 0;
 				if (hasMain) {
-					throw new ParseError("multiple files lack `kue`");
+					throw new ParseError("multiple main files");
 				}
 				hasMain = true;
 			}
 
 			const loaded = TentativeLoad.from((initialAddress + pageId * MAX_SIZE) | 0, file);
-
+			
 			for (const kue of file.kueList) {
 				const address = loaded.resolveLabel(kue);
 				if (address == null) {
@@ -56,7 +56,7 @@ export class Program {
 			loads[pageId] = loaded;
 		});
 		if (!hasMain) {
-			throw new ParseError("all files have `kue`");
+			throw new ParseError("no main file");
 		}
 		return new Program(loads, kueTable);
 	}

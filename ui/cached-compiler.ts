@@ -1,4 +1,5 @@
-import {fullParse, ParsedFile} from "../2003lk/parse";
+import {ParsedFile, fullParse as parseAsm} from "../2003lk/parse";
+import {fullParse as parseTinka} from "../tinka/parse";
 import {Program} from "../2003lk/linker";
 import {ParseError} from "../2003lk/types";
 
@@ -7,6 +8,7 @@ export {Program};
 export interface SourceFile {
 	source: string;
 	name: string;
+	language: "2003lk"|"tinka";
 }
 
 export default class CachedCompiler {
@@ -37,7 +39,11 @@ export default class CachedCompiler {
 				return;
 			}
 			try {
-				this.parsedFiles[id] = fullParse(file.source, file.name);
+				if (file.language == "2003lk") {
+					this.parsedFiles[id] = parseAsm(file.source, file.name);
+				} else {
+					this.parsedFiles[id] = parseTinka(file.source, file.name);
+				}
 				this.errors[id] = "";
 			} catch (e) {
 				if (e instanceof ParseError) {
@@ -48,7 +54,7 @@ export default class CachedCompiler {
 					throw e;
 				}
 			}
-			this.parsedSources[id] = {source: file.source, name: file.name};
+			this.parsedSources[id] = Object.assign({}, file);
 			shouldLink = true;
 		});
 		if (files.length != this.parsedSources.length) {

@@ -109,7 +109,7 @@ class App extends React.Component<{}, AppState> {
 
 	private executeTick() {
 		this.timeOutHandler = null;
-		const continuing = this.execOne();
+		const continuing = this.execOneStep();
 		if (continuing) {
 			this.timeOutHandler = setTimeout(this.executeTick, TICK_TIME);
 		} else {
@@ -117,11 +117,11 @@ class App extends React.Component<{}, AppState> {
 		}
 	}
 
-	private execOne() {
+	private execOneStep() {
 		let continuing = false;
 		let errors = "";
 		try {
-			continuing = this.machine.execOne();
+			continuing = this.machine.execOneStep();
 		} catch (e) {
 			if (e instanceof RuntimeError) {
 				continuing = false;
@@ -150,7 +150,7 @@ class App extends React.Component<{}, AppState> {
 			}
 			this.setState({pausing: true});
 		} else {
-			const continuing = this.execOne();
+			const continuing = this.execOneStep();
 			if (!continuing) {
 				this.setState({executing: false, pausing: false});
 			}
@@ -162,9 +162,8 @@ class App extends React.Component<{}, AppState> {
 	}
 
 	private getCurrentNXToken(): Token | null {
-		const _inst = this.machine.program.readNX(this.machine.cpu.nx);
-		if (_inst != null) {
-			const [_, inst] = _inst;
+		const inst = this.machine.program.readNX(this.machine.cpu.nx);
+		if (inst != null && inst.token) {
 			return inst.token;
 		}
 		return null;

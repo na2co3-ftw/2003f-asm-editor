@@ -94,14 +94,12 @@ export namespace Value {
 }
 
 export interface Instruction {
-	token: Token | null;
-
 	exec(hw: Hardware);
 }
 
 export namespace Instruction {
 	abstract class BinaryInstruction implements Instruction {
-		constructor(public token: Token | null, private src: Value, private dst: WritableValue) {}
+		constructor(private src: Value, private dst: WritableValue) {}
 
 		exec(hw: Hardware) {
 			this.dst.setValue(hw, this.compute(this.dst.getValue(hw), this.src.getValue(hw)));
@@ -144,7 +142,6 @@ export namespace Instruction {
 
 	export class Lat implements Instruction {
 		constructor(
-			public token: Token | null,
 			private src: Value,
 			private dstl: WritableValue,
 			private dsth: WritableValue
@@ -161,7 +158,6 @@ export namespace Instruction {
 
 	export class Latsna implements Instruction {
 		constructor(
-			public token: Token | null,
 			private src: Value,
 			private dstl: WritableValue,
 			private dsth: WritableValue
@@ -177,7 +173,7 @@ export namespace Instruction {
 	}
 
 	export class Krz implements  Instruction {
-		constructor(public token: Token | null, private src: Value, private dst: WritableValue) {}
+		constructor(private src: Value, private dst: WritableValue) {}
 
 		exec(hw: Hardware) {
 			this.dst.setValue(hw, this.src.getValue(hw));
@@ -192,7 +188,6 @@ export namespace Instruction {
 
 	export class Fi implements  Instruction {
 		constructor(
-			public token: Token | null,
 			private a: Value,
 			private b: Value,
 			private cond: Cond
@@ -207,7 +202,6 @@ export namespace Instruction {
 
 	export class Inj implements  Instruction {
 		constructor(
-			public token: Token | null,
 			private a: Value,
 			private b: WritableValue,
 			private c: WritableValue
