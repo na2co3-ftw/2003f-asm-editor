@@ -232,7 +232,8 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 			styleActiveLine: true,
 			lineNumbers: true,
 			// gutters: ["CodeMirror-lint-markers"],
-			lint: this.lintOptions
+			lint: this.lintOptions,
+			indentUnit: 4
 		};
 
 		return (
