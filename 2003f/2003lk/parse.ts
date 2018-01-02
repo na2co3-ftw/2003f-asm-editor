@@ -1,5 +1,5 @@
-import {Cond, ParsedFile, ParseError, Register, Token} from "../types";
-import {AsmBuilder, isValidLabel, Operand, parseLabel, WritableOperand} from "../builder";
+import {Compare, isCompare, isRegister, ParsedFile, ParseError, Token, Value, WritableValue} from "../types";
+import {AsmBuilder, V} from "../builder";
 
 export function fullCompile(str: string, file: string = ""): ParsedFile {
 	const ts = tokenize(str.replace(/\r\n?/g, "\n"), file);
@@ -109,7 +109,7 @@ function parse(tokens: Token[]): ParsedFile {
 		} else if (tokenStr == "'i'c") {
 			isCI = false;
 		} else if (tokenStr == "fen") {
-			builder.krz(Register.f0, Register.f0);
+			builder.krz(V.f0, V.f0);
 		} else if (tokenStr == "nac" && i + 1 < tokens.length) {
 			const dst = parseL(tokens[i + 1]);
 			builder.nac(dst);
@@ -130,10 +130,10 @@ function parse(tokens: Token[]): ParsedFile {
 			const dsth = isCI ? parseL(tokens[i + 2]) : parseL(tokens[i + 3]);
 			builder.latsna(src, dstl, dsth);
 			i += 3;
-		} else if (tokenStr == "fi" && i + 3 < tokens.length && Cond.hasOwnProperty(tokens[i + 3].text)) {
+		} else if (tokenStr == "fi" && i + 3 < tokens.length && isCompare(tokens[i + 3].text)) {
 			const a = parseR(tokens[i + 1]);
 			const b = parseR(tokens[i + 2]);
-			builder.fi(a, b, Cond[tokens[i + 3].text]);
+			builder.fi(a, b, (tokens[i + 3].text as Compare));
 			i += 3;
 		} else if (tokenStr == "inj" && i + 3 < tokens.length) {
 			const a = isCI ? parseR(tokens[i + 3]) : parseR(tokens[i + 1]);
@@ -145,14 +145,14 @@ function parse(tokens: Token[]): ParsedFile {
 			builder.nll(tokens[i + 1].text);
 			i += 1;
 		} else if (tokenStr == "l'" && i + 1 < tokens.length) {
-			builder.l(parseLabel(tokens[i + 1]));
+			builder.l(tokens[i + 1].text);
 			i += 1;
 		} else if (tokenStr == "kue" && i + 1 < tokens.length) {
-			builder.kue(parseLabel(tokens[i + 1]));
+			builder.kue(tokens[i + 1].text);
 			builder.setHasMain(false);
 			i += 1;
 		} else if (tokenStr == "xok" && i + 1 < tokens.length) {
-			builder.xok(parseLabel(tokens[i + 1]));
+			builder.xok(tokens[i + 1].text);
 			i += 1;
 		} else {
 			throw new ParseError("Unparsable command sequence " + tokens.map(t => t.text).slice(i).join(" "));
@@ -161,41 +161,34 @@ function parse(tokens: Token[]): ParsedFile {
 	return builder.getParsedFile();
 }
 
-function parseRegister(token: string): Register {
-	if (Register.hasOwnProperty(token)) {
-		return Register[token];
-	}
-	throw new ParseError("no register");
-}
-
-function parseR(token: Token): Operand {
+function parseR(token: Token): Value {
 	try {
 		return parseL(token);
 	} catch(_) {}
 	if (token.text.search(/^\d*$/) >= 0) {
-		return {v: parseInt(token.text)};
+		return V.imm(parseInt(token.text));
 	}
-	if (isValidLabel(token.text)) {
-		return token.text;
-	}
+	try {
+		return V.label(token.text);
+	} catch(_) {}
 	throw new ParseError(`cannot parse \`${token.text}\` as a valid data"`);
 }
 
-function parseL(token: Token): WritableOperand {
+function parseL(token: Token): WritableValue {
 	const tokenStr = token.text;
-	if (tokenStr.length == 2) {
-		return parseRegister(tokenStr);
+	if (isRegister(tokenStr)) {
+		return V.reg(tokenStr);
 	}
 	let match;
 	if ((match = tokenStr.match(/^(..)@$/)) != null) {
-		return [parseRegister(match[1])];
+		return V.indReg(match[1]);
 	}
 	if ((match = tokenStr.match(/^(..)\+(\d*)@$/)) != null) {
-		return [parseRegister(match[1]), {v: parseInt(match[2])}];
+		return V.indRegDisp(match[1], parseInt(match[2]));
 	}
 	if ((match = tokenStr.match(/^(..)\+(..)@$/)) != null) {
-		if (Register.hasOwnProperty(match[2])) {
-			return [parseRegister(match[1]), parseRegister(match[2])];
+		if (isRegister(match[2])) {
+			return V.indRegReg(match[1], match[2]);
 		}
 	}
 	throw new ParseError(`cannot parse \`${tokenStr}\` as a valid place to put data`);

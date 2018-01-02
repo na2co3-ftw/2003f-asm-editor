@@ -2,10 +2,9 @@ import {
 	Definition, Xok, Kue, Cersva,
 	Statement, Anax, Fi, Fal, Dosnud, Fenxeo, Operation,
 	Expression, Constant, AnaxName,
-	Compare
 } from "./types";
-import {Cond, ParsedFile, ParseError, Register, Token} from "../types";
-import {AsmBuilder, WritableOperand, Operand, isImm, parseLabel} from "../builder";
+import {Compare, isCompare, ParsedFile, ParseError, Token, Value, WritableValue} from "../types";
+import {AsmBuilder, V} from "../builder";
 
 const MONO_OPERATORS = ["nac"];
 const BI_OPERATORS = [
@@ -16,15 +15,15 @@ const BI_OPERATORS = [
 ];
 const TRI_OPERATORS = ["lat", "latsna"];
 const NEGATE_COMPARE = {
-	[Compare.xtlo]: Cond.llo,
-	[Compare.xylo]: Cond.xolo,
-	[Compare.clo]: Cond.niv,
-	[Compare.niv]: Cond.clo,
-	[Compare.llo]: Cond.xtlo,
-	[Compare.xtlonys]: Cond.llonys,
-	[Compare.xylonys]: Cond.xolonys,
-	[Compare.llonys]: Cond.xtlonys,
-	[Compare.xolonys]: Cond.xylonys
+	xtlo: "llo",
+	xylo: "xolo",
+	clo: "niv",
+	niv: "clo",
+	llo: "xtlo",
+	xtlonys: "llonys",
+	xylonys: "xolonys",
+	llonys: "xtlonys",
+	xolonys: "xylonys"
 };
 
 export function fullCompile(str: string, file: string = ""): ParsedFile {
@@ -90,9 +89,9 @@ function parse(tokens: Token[]): Definition[] {
 	while (idx < tokens.length) {
 		const tokenStr = tokens[idx].text;
 		if (tokenStr == "kue") {
-			definitions.push(new Kue(parseLabel(tokens[++idx])));
+			definitions.push(new Kue(tokens[++idx].text));
 		} else if (tokenStr == "xok") {
-			definitions.push(new Xok(parseLabel(tokens[++idx])));
+			definitions.push(new Xok(tokens[++idx].text));
 		} else if (tokenStr == "cersva") {
 			const name = tokens[++idx].text;
 			if (name.search(/^\d/) >= 0) {
@@ -143,14 +142,20 @@ function parse(tokens: Token[]): Definition[] {
 				}
 			} else if (tokenStr == "fi") {
 				const left = parseExpression(tokens[++idx].text);
-				const compare = Compare[tokens[++idx].text];
+				const compare = tokens[++idx].text;
+				if (!isCompare(compare)) {
+					throw new ParseError("");
+				}
 				const right = parseExpression(tokens[++idx].text);
 				idx++;
 				const body = parseBlock();
 				statements.push(new Fi(token, left, compare, right, body));
 			} else if (tokenStr == "fal") {
 				const left = parseExpression(tokens[++idx].text);
-				const compare = Compare[tokens[++idx].text];
+				const compare = tokens[++idx].text;
+				if (!isCompare(compare)) {
+					throw new ParseError("");
+				}
 				const right = parseExpression(tokens[++idx].text);
 				idx++;
 				const body = parseBlock();
@@ -232,7 +237,7 @@ function transpile(definitions: Definition[]): ParsedFile {
 	let labelCount: {[label: string]: number} = {};
 
 	if (definitions.some(stmt => stmt instanceof Cersva && stmt.name == "_fasal")) {
-		builder.krz("_fasal", Register.xx);
+		builder.krz(V.label("_fasal"), V.reg("xx"));
 		builder.setHasMain(true);
 	}
 
@@ -253,17 +258,17 @@ function transpile(definitions: Definition[]): ParsedFile {
 			}
 			const cersvaStackSize = ff.stackSize;
 			builder.nll(def.name);
-			builder.nta({v: 4}, Register.f5);
-			builder.krz(Register.f1, [Register.f5]);
+			builder.nta(V.imm(4), V.f5);
+			builder.krz(V.f1, V.f5io);
 			ff.stackSize++;
 			transpileBlock(def.body, ff);
 			builder.nll(ff.dosnudLabel);
 			if (ff.stackSize > cersvaStackSize + 1) {
-				builder.ata({v: (ff.stackSize - cersvaStackSize - 1) * 4}, Register.f5);
+				builder.ata(V.imm((ff.stackSize - cersvaStackSize - 1) * 4), V.reg("f5"));
 			}
-			builder.krz([Register.f5], Register.f1);
-			builder.ata({v: 4}, Register.f5);
-			builder.krz([Register.f5], Register.xx);
+			builder.krz(V.f5io, V.f1);
+			builder.ata(V.imm(4), V.f5);
+			builder.krz(V.f5io, V.xx);
 		}
 	}
 	return builder.getParsedFile();
@@ -274,10 +279,10 @@ function transpile(definitions: Definition[]): ParsedFile {
 			if (stmt instanceof Fi) {
 				const endlabel = getLabel("fi");
 				const left = convertExpr(stmt.left);
-				builder.krz(left, Register.f0);
+				builder.krz(left, V.f0);
 				const right = convertExpr(stmt.right);
-				builder.fi(Register.f0, right, negate(stmt.compare));
-				builder.malkrz(endlabel, Register.xx);
+				builder.fi(V.f0, right, negate(stmt.compare));
+				builder.malkrz(V.label(endlabel), V.xx);
 				transpileBlock(stmt.body, ff);
 				builder.nll(endlabel);
 			} else if (stmt instanceof Fal) {
@@ -285,33 +290,35 @@ function transpile(definitions: Definition[]): ParsedFile {
 				const endlabel = getLabel("fal");
 				const left = convertExpr(stmt.left);
 				builder.nll(headLabel);
-				builder.krz(left, Register.f0);
+				builder.krz(left, V.f0);
 				const right = convertExpr(stmt.right);
-				builder.fi(Register.f0, right, negate(stmt.compare));
-				builder.malkrz(endlabel, Register.xx);
+				builder.fi(V.f0, right, negate(stmt.compare));
+				builder.malkrz(V.label(endlabel), V.xx);
 				transpileBlock(stmt.body, ff);
-				builder.krz(headLabel, Register.xx);
+				builder.krz(V.label(headLabel), V.xx);
 				builder.nll(endlabel);
 			} else if (stmt instanceof Anax) {
 				ff.stackSize += stmt.length;
-				builder.nta({v: stmt.length * 4}, Register.f5);
+				builder.nta(V.imm(stmt.length * 4), V.f5);
 				ff.variables[stmt.name] = ff.stackSize;
 			} else if (stmt instanceof Fenxeo) {
-				let name: Operand = stmt.name;
-				if (name == "'3126834864") {
-					name = {v: 3126834864};
+				let name: Value;
+				if (stmt.name == "'3126834864") {
+					name = V.imm(3126834864);
+				} else {
+					name = V.label(stmt.name);
 				}
 				stmt.args.forEach((arg, i) => {
 					const argValue = convertExpr(arg, i + 1);
-					builder.nta({v: 4}, Register.f5);
-					builder.krz(argValue, [Register.f5]);
+					builder.nta(V.imm(4), V.f5);
+					builder.krz(argValue, V.f5io);
 				});
-				builder.nta({v: 4}, Register.f5);
-				builder.inj(name, Register.xx, [Register.f5]);
-				builder.ata({v: (stmt.args.length + 1) * 4}, Register.f5);
+				builder.nta(V.imm(4), V.f5);
+				builder.inj(name, V.xx, V.f5io);
+				builder.ata(V.imm((stmt.args.length + 1) * 4), V.f5);
 				if (stmt.destination != null) {
 					const dst = convertLeftExpr(stmt.destination);
-					builder.krz(Register.f0, dst);
+					builder.krz(V.f0, dst);
 				}
 			} else if (stmt instanceof Operation) {
 				switch (stmt.mnemonic) {
@@ -358,20 +365,21 @@ function transpile(definitions: Definition[]): ParsedFile {
 				}
 			} else if (stmt instanceof Dosnud) {
 				const value = convertExpr(stmt.value);
-				builder.krz(value, Register.f0);
-				builder.krz(ff.dosnudLabel, Register.xx);
+				builder.krz(value, V.f0);
+				builder.krz(V.label(ff.dosnudLabel), V.xx);
 			} else {
 				throw new ParseError("");
 			}
 		}
 
-		function convertExpr(expr: Expression, count: number = 0): Operand {
+		function convertExpr(expr: Expression, count: number = 0): Value {
 			if (expr instanceof Constant) {
-				return {v: expr.value};
+				return V.imm(expr.value);
 			}
 			return convertLeftExpr(expr, count);
 		}
-		function convertLeftExpr(expr: Expression, count: number = 0): WritableOperand {
+
+		function convertLeftExpr(expr: Expression, count: number = 0): WritableValue {
 			if (!(expr instanceof AnaxName)) {
 				throw new ParseError("");
 			}
@@ -379,13 +387,13 @@ function transpile(definitions: Definition[]): ParsedFile {
 				throw new ParseError("");
 			}
 			const pos = convertExpr(expr.pos, count);
-			if (isImm(pos)) {
-				return [Register.f5, {v: (ff.stackSize - ff.variables[expr.name] + pos.v + count) * 4}];
+			if (pos instanceof Value.Pure) {
+				return V.indRegDisp("f5", (ff.stackSize - ff.variables[expr.name] + pos.value + count) * 4);
 			} else {
-				builder.krz(pos, Register.f1);
-				builder.ata({v: ff.stackSize - ff.variables[expr.name] + count}, Register.f1);
-				builder.dro({v: 2}, Register.f1);
-				return [Register.f5, Register.f1];
+				builder.krz(pos, V.f1);
+				builder.ata(V.imm(ff.stackSize - ff.variables[expr.name] + count), V.f1);
+				builder.dro(V.imm(2), V.f1);
+				return V.indRegReg("f5", "f1");
 			}
 
 		}
@@ -401,7 +409,7 @@ function transpile(definitions: Definition[]): ParsedFile {
 	}
 }
 
-function negate(compare: Compare): Cond {
+function negate(compare: Compare): Compare {
 	return NEGATE_COMPARE[compare];
 }
 

@@ -21,26 +21,13 @@ export class CPU {
 	}
 
 	getRegister(r: Register): number {
-		//console.log(`${Register[r]} -> ${this[r]}`);
-		if (r == Register.f0) return this.f0;
-		if (r == Register.f1) return this.f1;
-		if (r == Register.f2) return this.f2;
-		if (r == Register.f3) return this.f3;
-		if (r == Register.f5) return this.f5;
-		if (r == Register.xx) return this.xx;
-		throw new RuntimeError("cannot happen");
+		//console.log(`${r} -> ${this[r]}`);
+		return this[r];
 	}
 
 	setRegister(r: Register, value: number) {
-		//console.log(`${Register[r]} <- ${value}`);
-		if (r == Register.f0) { this.f0 = value; return; }
-		if (r == Register.f1) { this.f1 = value; return; }
-		if (r == Register.f2) { this.f2 = value; return; }
-		if (r == Register.f3) { this.f3 = value; return; }
-		if (r == Register.f5) { this.f5 = value; return; }
-		if (r == Register.xx) {
-			this.xx = value; return;
-		}
+		//console.log(`${r} <- ${value}`);
+		this[r] = value;
 	}
 }
 
@@ -102,11 +89,11 @@ export class Hardware {
 
 		if (this.cpu.nx == outermostRetAddress) {
 			this.finalize();
-			return ExecResult.END
+			return ExecResult.END;
 		} else if (this.cpu.nx == debugOutputAddress) {
-			const value = new Value.RPlusNum(Register.f5, 4).getValue(this);
+			const value = new Value.RPlusNum("f5", 4).getValue(this);
 			this.log.push(value.toString());
-			this.cpu.xx = new Value.RPlusNum(Register.f5, 0).getValue(this);
+			this.cpu.xx = new Value.RPlusNum("f5", 0).getValue(this);
 			this.updateNX();
 		}
 		return ExecResult.CONTINUE;

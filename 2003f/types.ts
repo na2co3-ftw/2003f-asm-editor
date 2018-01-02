@@ -10,8 +10,12 @@ export class Token {
 	) {}
 }
 
-export enum Register {
-	f0, f1, f2, f3, f5, xx
+export type Register = "f0" | "f1" | "f2" | "f3" | "f5" | "xx";
+
+const REGISTERS = ["f0", "f1", "f2", "f3", "f5", "xx"];
+
+export function isRegister(reg: string): reg is Register {
+	return REGISTERS.indexOf(reg) >= 0;
 }
 
 export interface Value {
@@ -65,7 +69,7 @@ export namespace Value {
 	}
 
 	export class Pure implements Value {
-		private value: number;
+		public value: number;
 
 		constructor(value: number) {
 			this.value = value | 0;
@@ -186,13 +190,13 @@ export namespace Instruction {
 		constructor(
 			private a: Value,
 			private b: Value,
-			private cond: Cond
+			private compare: Compare
 		) {}
 
 		exec(hw: Hardware) {
 			const a = this.a.getValue(hw);
 			const b = this.b.getValue(hw);
-			hw.cpu.flag = COND_TO_FUNC[this.cond](a, b);
+			hw.cpu.flag = COMPARE_TO_FUNC[this.compare](a, b);
 		}
 	}
 
@@ -212,21 +216,30 @@ export namespace Instruction {
 	}
 }
 
-export enum Cond {
-	xtlo, xylo, clo, xolo, llo, niv, xtlonys, xylonys, xolonys, llonys
+export type Compare =
+	"xtlo" | "xylo" | "clo" | "xolo" | "llo" | "niv" |
+	"xtlonys" | "xylonys" | "xolonys" | "llonys";
+
+const COMPARES = [
+	"xtlo", "xylo", "clo", "xolo", "llo", "niv",
+	"xtlonys", "xylonys", "xolonys", "llonys"
+];
+
+export function isCompare(compare: string): compare is Compare {
+	return COMPARES.indexOf(compare) >= 0;
 }
 
-export const COND_TO_FUNC = {
-	[Cond.xtlonys]: (a, b) => a <= b,
-	[Cond.xylonys]: (a, b) => a < b,
-	[Cond.clo]: (a, b) => a == b,
-	[Cond.xolonys]: (a, b) => a >= b,
-	[Cond.llonys]: (a, b) => a > b,
-	[Cond.niv]: (a, b) => a != b,
-	[Cond.xtlo]: lif((a, b) => a <= b),
-	[Cond.xylo]: lif((a, b) => a < b),
-	[Cond.xolo]: lif((a, b) => a >= b),
-	[Cond.llo]: lif((a, b) => a > b),
+const COMPARE_TO_FUNC: {[compare: string]: (a: number, b:number) => boolean} = {
+	xtlonys: (a, b) => a <= b,
+	xylonys: (a, b) => a < b,
+	clo: (a, b) => a == b,
+	xolonys: (a, b) => a >= b,
+	llonys: (a, b) => a > b,
+	niv: (a, b) => a != b,
+	xtlo: lif((a, b) => a <= b),
+	xylo: lif((a, b) => a < b),
+	xolo: lif((a, b) => a >= b),
+	llo: lif((a, b) => a > b),
 };
 
 export type LabeledInstruction = {

@@ -10,7 +10,7 @@ const MNEMONICS = [
 	"fen"
 ];
 
-const CONDITIONS = [
+const COMPARES = [
 	"xtlo", "xylo", "clo", "xolo", "llo", "niv",
 	"xtlonys", "xylonys", "xolonys", "llonys"
 ];
@@ -32,7 +32,7 @@ const BUILTINFUNCTIONS = [
 CodeMirror.defineSimpleMode("2003lk", {
 	start: [
 		{regex: new RegExp(`(${MNEMONICS.join("|")})(?![\\w'_-])`), token: "keyword"},
-		{regex: new RegExp(`(${CONDITIONS.join("|")})(?![\\w'_-])`), token: "builtin"},
+		{regex: new RegExp(`(${COMPARES.join("|")})(?![\\w'_-])`), token: "builtin"},
 		{regex: new RegExp(`(${REGISTERS.join("|")})(?![\\w'_-])`), token: "variable"},
 		{regex: new RegExp(`(${DIRECTIVES.join("|")})(?![\\w'_-])`), token: "special"},
 		{regex: new RegExp(`(${BUILTINFUNCTIONS.join("|")})(?![\\w'_-])`), token: "builtin"},
