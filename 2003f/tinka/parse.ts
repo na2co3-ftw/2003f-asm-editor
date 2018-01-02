@@ -134,12 +134,20 @@ export function tokenize(source: string, file: string = ""): Token[] {
 	let column = 0;
 	let tokens: Token[] = [];
 	while (true) {
+		let text = "";
+
 		while (pos < source.length) {
 			let char = source[pos];
-			if (char == "-" && pos + 1 < source.length && source[pos + 1] == "-") {
+			if (char == "-") {
 				advance();
-				while (pos < source.length && source[pos] != "\n") {
+				if (pos < source.length && source[pos] == "-") {
 					advance();
+					while (pos < source.length && source[pos] != "\n") {
+						advance();
+					}
+				} else {
+					text += "-";
+					break;
 				}
 			} else if (!isWhiteSpace(char)) {
 				break;
@@ -150,12 +158,14 @@ export function tokenize(source: string, file: string = ""): Token[] {
 			break;
 		}
 
-		let text = "";
 		const startRow = row;
 		const startColumn = column;
 		while (pos < source.length) {
 			let char = source[pos];
-			if (isWhiteSpace(char) || char == "-" /* || char == "@" || char == "+" || char == ";" */) {
+			if (isWhiteSpace(char)) {
+				break;
+			}
+			if (char == "-" && pos + 1 < source.length && source[pos + 1] == "-") {
 				break;
 			}
 			text += char;
