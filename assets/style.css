@@ -16,6 +16,11 @@ body {
 	src: url(./jietoden_liparxe.woff);
 }
 
+div {
+	margin: 0;
+	padding: 0;
+}
+
 .contents {
 	position: relative;
 }
@@ -88,6 +93,15 @@ body {
 	background: #fff;
 }
 
+.editor-status-bar {
+	background: #eee;
+	border: 1px solid black;
+	border-top-style: none;
+	cursor: default;
+	text-align: right;
+	padding: 0.2em 0.5em;
+}
+
 .errors {
 	color: red;
 }
@@ -96,6 +110,19 @@ body {
 	background: rgba(255, 0, 0, 0.3);
 }
 
+.out-not-executing {
+	background: #ccc;
+}
+.out-memory-section {
+	display: inline-block;
+	margin: 0;
+	padding: 0;
+}
+.out-memory-section.separator {
+	border-top: 1px dashed black;
+	margin-top: 3px;
+	padding-top: 3px;
+}
 .out-memory-pointer {
 	outline: 1px solid black;
 	position: relative;

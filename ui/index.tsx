@@ -207,28 +207,29 @@ class App extends React.Component<{}, AppState> {
 						<button
 							onClick={this.execute}
 							disabled={this.state.executing && !this.state.pausing}
-						>実行</button>
+						>{!this.state.executing ? "実行" : this.state.pausing ? "再開" : "実行中"}
+						</button>
+
+						<button
+							onClick={this.step}
+							disabled={this.state.executing && !this.state.pausing}
+						>{this.state.executing ? "ステップ実行" : "ステップ実行開始"}</button>
+
+						{" | "}
 
 						<button
 							onClick={this.pause}
 							disabled={!this.state.executing || this.state.pausing}
-						>中断</button>
+						>一時停止</button>
 
 						<button
 							onClick={this.stop}
 							disabled={!this.state.executing}
 						>終了</button>
 
-						{" | "}
-
-						<button
-							onClick={this.step}
-							disabled={this.state.executing && !this.state.pausing}
-						>ステップ実行</button>
-
 						<p className="errors">{this.state.runtimeErrors}</p>
 
-						<HardwareState machine={this.machine}/>
+						<HardwareState machine={this.machine} executing={this.state.executing}/>
 					</div>
 				</div>
 			</div>

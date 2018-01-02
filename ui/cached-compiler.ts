@@ -2,6 +2,7 @@ import {fullCompile as compileAsm} from "../2003f/2003lk/parse";
 import {fullCompile as compileTinka} from "../2003f/tinka/transpile";
 import {Program} from "../2003f/linker";
 import {ParsedFile, ParseError} from "../2003f/types";
+import isEqual = require("lodash.isequal");
 
 export {Program};
 
@@ -32,10 +33,7 @@ export default class CachedCompiler {
 		let shouldLink = false;
 		let hasError = false;
 		files.forEach((file, id) => {
-			if (this.parsedSources[id] &&
-				file.source == this.parsedSources[id].source &&
-				file.name == this.parsedSources[id].name
-			) {
+			if (isEqual(file, this.parsedSources[id])) {
 				return;
 			}
 			try {

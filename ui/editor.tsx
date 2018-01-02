@@ -13,6 +13,7 @@ import "../codemirror/mode/tinka/tinka";
 
 import CachedCompiler, {Program, SourceFile} from "./cached-compiler";
 import EditorTab from "./editor-tab";
+import EditorStatusBar from "./editor-status-bar";
 
 const DEFAULT_ASM_NAME = "fib_non_recursive";
 const DEFAULT_ASM = `'c'i    
@@ -100,6 +101,7 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 		this.selectTab = this.selectTab.bind(this);
 		this.closeTab = this.closeTab.bind(this);
 		this.renameFile = this.renameFile.bind(this);
+		this.changeLanguage = this.changeLanguage.bind(this);
 	}
 
 	private editorChange(editor: CodeMirror.Editor) {
@@ -120,11 +122,12 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 				let source = (e.target as FileReader).result.replace(/\r\n?/g, "\n");
 				this.setState((state: EditorState) => {
 					const name = this.uniqueFileName(state.sources.length, file.name, state.sources);
-					return {sources: [...state.sources, {
+					const sources = [...state.sources, {
 						name,
 						source,
 						language: name.endsWith(".tinka") ? "tinka" : "2003lk"
-					}]};
+					}];
+					return {sources, fileId: sources.length - 1};
 				});
 			});
 			reader.readAsText(file);
@@ -134,12 +137,13 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 	private newTab() {
 		this.setState((state: EditorState) => {
 			const name = this.uniqueFileName(state.sources.length, "untitled", state.sources);
-			return {sources: [...state.sources, {name: name, source: "", language: "2003lk"}]};
+			const sources = [...state.sources, {name: name, source: "", language: "2003lk"}];
+			return {sources, fileId: sources.length - 1};
 		});
 	}
 
 	private selectTab(id: number) {
-		this.setState(() => ({fileId: id}));
+		this.setState({fileId: id});
 	}
 
 	private closeTab(id: number){
@@ -163,12 +167,9 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 		}
 		this.setState((state: EditorState) => {
 			const sources = state.sources.slice(0);
-			if (name.endsWith(".tinka")) {
-				sources[id].language = "tinka";
-			} else {
-				sources[id].language = "2003lk";
-			}
-			sources[id].name = this.uniqueFileName(id, name, sources);
+			sources[id] = Object.assign({}, sources[id], {
+				name: this.uniqueFileName(id, name, sources)
+			});
 			return {sources};
 		});
 	}
@@ -190,6 +191,16 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 			}
 			appendNumber++;
 		}
+	}
+
+	changeLanguage() {
+		this.setState((state: EditorState) => {
+			const sources = state.sources.slice(0);
+			sources[state.fileId] = Object.assign({}, sources[state.fileId], {
+				language: sources[state.fileId].language == "2003lk" ? "tinka" : "2003lk"
+			});
+			return {sources};
+		});
 	}
 
 	private parse(sources: SourceFile[]): Program | null {
@@ -222,7 +233,7 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 			lineNumbers: true,
 			// gutters: ["CodeMirror-lint-markers"],
 			lint: this.lintOptions
-		}
+		};
 
 		return (
 			<div className={this.props.className || ""}>
@@ -249,6 +260,10 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 					markers={this.props.markers.filter(marker => marker.file == currentFile.name)}
 					onChange={this.editorChange}
 					ref={(el => this.cm = el!)}
+				/>
+				<EditorStatusBar
+					file={this.state.sources[this.state.fileId]}
+					changeLanguage={this.changeLanguage}
 				/>
 				<p className="errors">{this.state.parseErrors}</p>
 			</div>

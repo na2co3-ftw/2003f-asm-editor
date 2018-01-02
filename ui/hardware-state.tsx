@@ -2,10 +2,12 @@ import React = require("react");
 
 import {Hardware} from "../2003f/execute";
 import {SECTION_SIZE} from "../2003f/memory";
+import {ReactNode} from "react";
 const SECTION_LENGTH = 1 << SECTION_SIZE;
 
 interface HardwareStateProps{
 	machine: Hardware;
+	executing: boolean;
 }
 
 interface HardwareStateState {
@@ -30,36 +32,31 @@ export default class HardwareState extends React.Component<HardwareStateProps, H
 	render() {
 		const machine: Hardware = this.props.machine;
 
-		let memoryHTML = "";
-		let inF5 = false;
-		for (const section of machine.memory.usingSections) {
-			let address = section << SECTION_SIZE;
-			memoryHTML += this.showInt32Pad(address);
-			memoryHTML += ":";
-			for (let i = 0; i < SECTION_LENGTH; i++) {
-				memoryHTML += " ";
-				if (address == machine.cpu.f5 || (i == 0 && inF5)) {
-					memoryHTML += '<span class="out-memory-pointer f5">';
-					inF5 = true;
-				}
-				if (machine.memory.data.hasOwnProperty(address)) {
-					memoryHTML += this.showInt8Pad(machine.memory.data[address]);
-				} else {
-					memoryHTML += this.state.hex ? "--" : "---";
-				}
-				if (inF5) {
-					if (address == ((machine.cpu.f5 + 3) | 0)) {
-						memoryHTML += '</span>';
-						inF5 = false;
-					}
-				}
-
-				address = (address + 1)|0;
+		let memoryNodes: ReactNode[] = [];
+		let notFirstLine = false;
+		let prevSection = -2;
+		const sections = machine.memory.usingSections.slice(0);
+		const f5Section = machine.cpu.f5 >>> SECTION_SIZE;
+		if (sections.indexOf(f5Section) < 0) {
+			sections.push(f5Section);
+			sections.sort((a, b) => a - b);
+		}
+		for (const section of sections) {
+			if (notFirstLine) {
+				memoryNodes.push(<br/>);
 			}
-			if (inF5) {
-				memoryHTML += '</span>';
-			}
-			memoryHTML += "<br>";
+			memoryNodes.push(
+				<MemorySection
+					key={section}
+					section={section}
+					hex={this.state.hex}
+					memory={machine.memory.data}
+					f5={machine.cpu.f5}
+					separator={notFirstLine && prevSection + 1 != section}
+				/>
+			);
+			prevSection = section;
+			notFirstLine = true;
 		}
 
 		return (
@@ -73,29 +70,31 @@ export default class HardwareState extends React.Component<HardwareStateProps, H
 						16進数で表示する
 					</label>
 				</p>
-				<p className="monospace">
-					Registers:<br/>
-					<span className="lineparine">
-						f0 = <span id="out-f0">{this.showInt32Pad(machine.cpu.f0)}</span><br/>
-						f1 = <span id="out-f1">{this.showInt32Pad(machine.cpu.f1)}</span><br/>
-						f2 = <span id="out-f2">{this.showInt32Pad(machine.cpu.f2)}</span><br/>
-						f3 = <span id="out-f3">{this.showInt32Pad(machine.cpu.f3)}</span><br/>
-						f5 = <span id="out-f5">{this.showInt32Pad(machine.cpu.f5)}</span><br/>
-						nx = <span id="out-nx">{this.showInt32Pad(machine.cpu.nx)}</span><br/>
-						xx = <span id="out-xx">{this.showInt32Pad(machine.cpu.xx)}</span><br/>
-						flag = <span id="out-flag">{machine.cpu.flag ? "1" : "0"}</span>
-					</span>
-				</p>
-				<p className="monospace">
-					Memory:<br/>
-					<span className="lineparine" dangerouslySetInnerHTML={{__html: memoryHTML}}/>
-				</p>
-				<p className="monospace">
-					Logs:<br/>
-					<span className="lineparine">
-						{machine.log.join("\n")}
-					</span>
-				</p>
+				<div className={!this.props.executing ? "out-not-executing": ""}>
+					<p className="monospace">
+						Registers:<br/>
+						<span className="lineparine">
+							f0 = <span id="out-f0">{this.showInt32Pad(machine.cpu.f0)}</span><br/>
+							f1 = <span id="out-f1">{this.showInt32Pad(machine.cpu.f1)}</span><br/>
+							f2 = <span id="out-f2">{this.showInt32Pad(machine.cpu.f2)}</span><br/>
+							f3 = <span id="out-f3">{this.showInt32Pad(machine.cpu.f3)}</span><br/>
+							f5 = <span id="out-f5">{this.showInt32Pad(machine.cpu.f5)}</span><br/>
+							nx = <span id="out-nx">{this.showInt32Pad(machine.cpu.nx)}</span><br/>
+							xx = <span id="out-xx">{this.showInt32Pad(machine.cpu.xx)}</span><br/>
+							flag = <span id="out-flag">{machine.cpu.flag ? "1" : "0"}</span>
+						</span>
+					</p>
+					<p className="monospace">
+						Memory:<br/>
+						<span className="lineparine">{memoryNodes}</span>
+					</p>
+					<p className="monospace">
+						Logs:<br/>
+						<span className="lineparine">
+							{machine.log.join("\n")}
+						</span>
+					</p>
+				</div>
 			</div>
 		);
 	}
@@ -103,11 +102,54 @@ export default class HardwareState extends React.Component<HardwareStateProps, H
 	private showInt32Pad(number: number) {
 		return showInt32Pad(number, this.state.hex);
 	}
-
-	private showInt8Pad(number: number) {
-		return showInt8Pad(number, this.state.hex);
-	}
 }
+
+interface MemorySectionProps{
+	section: number,
+	memory: {[address: number]: number}
+	hex: boolean,
+	f5: number,
+	separator: boolean
+}
+
+const MemorySection: React.SFC<MemorySectionProps> = (props) => {
+	let memoryHTML = "";
+	let inF5 = false;
+	let address = props.section << SECTION_SIZE;
+	memoryHTML += showInt32Pad(address, props.hex);
+	memoryHTML += ":";
+	for (let i = 0; i < SECTION_LENGTH; i++) {
+		memoryHTML += " ";
+		if (address == props.f5) {
+			memoryHTML += '<span class="out-memory-pointer f5">';
+			inF5 = true;
+		}
+		if (props.memory.hasOwnProperty(address)) {
+			memoryHTML += showInt8Pad(props.memory[address], props.hex);
+		} else {
+			memoryHTML += props.hex ? "--" : "---";
+		}
+		if (inF5) {
+			if (address == ((props.f5 + 3) | 0)) {
+				memoryHTML += '</span>';
+				inF5 = false;
+			}
+		}
+
+		address = (address + 1)|0;
+	}
+	if (inF5) {
+		memoryHTML += '</span>';
+	}
+	memoryHTML += "<br>";
+
+	return (
+		<span
+			className={props.separator ? "out-memory-section separator" : "out-memory-section"}
+			dangerouslySetInnerHTML={{__html: memoryHTML}}
+		/>
+	);
+};
 
 function showInt32Pad(number: number, hex: boolean = false): string {
 	const length = hex ? 8 : 10;
