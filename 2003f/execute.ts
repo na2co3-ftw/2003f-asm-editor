@@ -92,7 +92,7 @@ export class Hardware {
 			return ExecResult.END;
 		} else if (this.cpu.nx == debugOutputAddress) {
 			const value = new Value.RPlusNum("f5", 4).getValue(this);
-			this.log.push(value.toString());
+			this.log.push((value >>> 0).toString());
 			this.cpu.xx = new Value.RPlusNum("f5", 0).getValue(this);
 			this.updateNX();
 		}
