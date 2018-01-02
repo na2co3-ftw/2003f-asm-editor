@@ -84,6 +84,7 @@ class App extends React.Component<{}, AppState> {
 		}
 		this.machine = new Hardware();
 		this.machine.load(program);
+		this.machine.execOneStep(true);
 		// this.forceUpdate();
 		this.setState({executing: true, runtimeErrors: ""});
 		return true;

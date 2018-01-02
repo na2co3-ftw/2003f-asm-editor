@@ -52,7 +52,7 @@ export class Hardware {
 		this.load(program);
 		this.log = [];
 		const f = () => {
-			if (this.execOneStep()) {
+			if (this.execOneInstruction(false) == ExecResult.CONTINUE) {
 				setTimeout(f, 0);
 			} else {
 				callback();
@@ -65,8 +65,8 @@ export class Hardware {
 		this.program = program;
 	}
 
-	execOneStep(): boolean {
-		let ret = this.execOneInstruction(false);
+	execOneStep(initial: boolean = false): boolean {
+		let ret = this.execOneInstruction(initial);
 		while (ret == ExecResult.CONTINUE) {
 			ret = this.execOneInstruction(true);
 		}
