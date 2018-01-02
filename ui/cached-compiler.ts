@@ -1,7 +1,7 @@
-import {ParsedFile, fullParse as parseAsm} from "../2003f/2003lk/parse";
-import {fullParse as parseTinka} from "../2003f/tinka/parse";
+import {fullCompile as compileAsm} from "../2003f/2003lk/parse";
+import {fullCompile as compileTinka} from "../2003f/tinka/parse";
 import {Program} from "../2003f/linker";
-import {ParseError} from "../2003f/types";
+import {ParsedFile, ParseError} from "../2003f/types";
 
 export {Program};
 
@@ -40,9 +40,9 @@ export default class CachedCompiler {
 			}
 			try {
 				if (file.language == "2003lk") {
-					this.parsedFiles[id] = parseAsm(file.source, file.name);
+					this.parsedFiles[id] = compileAsm(file.source, file.name);
 				} else {
-					this.parsedFiles[id] = parseTinka(file.source, file.name);
+					this.parsedFiles[id] = compileTinka(file.source, file.name);
 				}
 				this.errors[id] = "";
 			} catch (e) {

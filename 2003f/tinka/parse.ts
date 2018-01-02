@@ -1,13 +1,11 @@
 import {
-	ParseError, Token,
 	Definition, Xok, Kue, Cersva,
 	Statement, Anax, Fi, Fal, Dosnud, Fenxeo, Operation,
 	Expression, Constant, AnaxName,
 	Compare
 } from "./types";
-import {ParsedFile} from "../2003lk/parse";
-import {Cond, Register, REGISTER_RESERVED} from "../types";
-import {AsmBuilder, WritableOperand, Operand, isImm} from "../builder";
+import {Cond, ParsedFile, ParseError, Register, Token} from "../types";
+import {AsmBuilder, WritableOperand, Operand, isImm, parseLabel} from "../builder";
 
 const MONO_OPERATORS = ["nac"];
 const BI_OPERATORS = [
@@ -29,7 +27,7 @@ const NEGATE_COMPARE = {
 	[Compare.xolonys]: Cond.xylonys
 };
 
-export function fullParse(str: string, file: string = ""): ParsedFile {
+export function fullCompile(str: string, file: string = ""): ParsedFile {
 	const ts = tokenize(str.replace(/\r\n?/g, "\n"), file);
 	return transpile(parse(ts));
 }
@@ -407,17 +405,3 @@ function negate(compare: Compare): Cond {
 	return NEGATE_COMPARE[compare];
 }
 
-function isValidLabel(name: string): boolean {
-	return (
-		name.search(/^\d*$/) < 0 &&
-		REGISTER_RESERVED.indexOf(name) < 0 &&
-		name.search(/^[pFftcxkqhRzmnrljwbVvdsgXiyuoea0-9'_-]+$/) >= 0
-	);
-}
-
-function parseLabel(token: Token): string {
-	if (isValidLabel(token.text)) {
-		return token.text;
-	}
-	throw new ParseError(`\`${token.text}\` cannot be used as a valid label`);
-}

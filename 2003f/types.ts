@@ -14,10 +14,6 @@ export enum Register {
 	f0, f1, f2, f3, f5, xx
 }
 
-export const REGISTER_RESERVED = [
-	"f0", "f1", "f2", "f3", "f4", "f5", "f6", "f7", "xx"
-];
-
 export interface Value {
 	getValue(hw: Hardware): number;
 }
@@ -232,6 +228,19 @@ export const COND_TO_FUNC = {
 	[Cond.xolo]: lif((a, b) => a >= b),
 	[Cond.llo]: lif((a, b) => a > b),
 };
+
+export type LabeledInstruction = {
+	instruction: Instruction,
+	labels: string[],
+	token?: Token;
+}
+
+export interface ParsedFile {
+	instructions: LabeledInstruction[];
+	kueList: string[];
+	xokList: string[];
+	hasMain: boolean;
+}
 
 export class ParseError {
 	constructor(public message: string) {}

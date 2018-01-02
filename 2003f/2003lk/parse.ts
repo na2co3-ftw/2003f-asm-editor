@@ -1,19 +1,7 @@
-import {Cond, Instruction, ParseError, Register, REGISTER_RESERVED, Token, Value, WritableValue} from "../types";
+import {Cond, ParsedFile, ParseError, Register, Token} from "../types";
+import {AsmBuilder, isValidLabel, Operand, parseLabel, WritableOperand} from "../builder";
 
-export type LabeledInstruction = {
-	instruction: Instruction,
-	labels: string[],
-	token?: Token;
-}
-
-export interface ParsedFile {
-	instructions: LabeledInstruction[];
-	kueList: string[];
-	xokList: string[];
-	hasMain: boolean;
-}
-
-export function fullParse(str: string, file: string = ""): ParsedFile {
+export function fullCompile(str: string, file: string = ""): ParsedFile {
 	const ts = tokenize(str.replace(/\r\n?/g, "\n"), file);
 	return parse(associateExpr(ts));
 }
@@ -107,98 +95,70 @@ function associateExpr(tokens: Token[]): Token[] {
 	return ret;
 }
 
-const BINARY_INSTRUCTIONS = {
-	"krz": Instruction.Krz,
-	"kRz": Instruction.Krz,
-	"ata": Instruction.Ata,
-	"nta": Instruction.Nta,
-	"ada": Instruction.Ada,
-	"ekc": Instruction.Ekc,
-	"dal": Instruction.Dal,
-	"dto": Instruction.Dto,
-	"dro": Instruction.Dro,
-	"dRo": Instruction.Dro,
-	"dtosna": Instruction.Dtosna,
-	"malkrz": Instruction.MalKrz,
-	"malkRz": Instruction.MalKrz
-};
-
 function parse(tokens: Token[]): ParsedFile {
 	let isCI = false;
-	let kueList: string[] = [];
-	let xokList: string[] = [];
-	let labels: string[] = [];
-	let instructions: LabeledInstruction[] = [];
-	function pushInstruction(instruction: Instruction, i: number) {
-		instructions.push({instruction, labels, token: tokens[i]});
-		labels = [];
-	}
+	let builder = new AsmBuilder();
+	builder.setHasMain(true);
 
 	for (let i = 0; i < tokens.length; i++) {
-		const token = tokens[i].text;
-		if (token == "'c'i") {
+		const token = tokens[i];
+		builder.setNextToken(token);
+		const tokenStr = token.text;
+		if (tokenStr == "'c'i") {
 			isCI = true;
-		} else if (token == "'i'c") {
+		} else if (tokenStr == "'i'c") {
 			isCI = false;
-		} else if (token == "fen") {
-			pushInstruction(new Instruction.Krz(new Value.R(Register.f0), new Value.R(Register.f0)), i);
-		} else if (token == "nac" && i + 1 < tokens.length) {
+		} else if (tokenStr == "fen") {
+			builder.krz(Register.f0, Register.f0);
+		} else if (tokenStr == "nac" && i + 1 < tokens.length) {
 			const dst = parseL(tokens[i + 1]);
-			pushInstruction(new Instruction.Dal(new Value.Pure(0), dst), i);
-		} else if (BINARY_INSTRUCTIONS.hasOwnProperty(token) && i + 2 < tokens.length) {
+			builder.nac(dst);
+		} else if (AsmBuilder.isBinOp(tokenStr) && i + 2 < tokens.length) {
 			const src = isCI ? parseR(tokens[i + 2]) : parseR(tokens[i + 1]);
 			const dst = isCI ? parseL(tokens[i + 1]) : parseL(tokens[i + 2]);
-			pushInstruction(new BINARY_INSTRUCTIONS[token](src, dst), i);
+			builder.binOp(tokenStr, src, dst);
 			i += 2;
-		} else if (token == "lat" && i + 3 < tokens.length) {
+		} else if (tokenStr == "lat" && i + 3 < tokens.length) {
 			const src = isCI ? parseR(tokens[i + 3]) : parseR(tokens[i + 1]);
 			const dstl = isCI ? parseL(tokens[i + 1]) : parseL(tokens[i + 2]);
 			const dsth = isCI ? parseL(tokens[i + 2]) : parseL(tokens[i + 3]);
-			pushInstruction(new Instruction.Lat(src, dstl, dsth), i);
+			builder.lat(src, dstl, dsth);
 			i += 3;
-		} else if (token == "latsna" && i + 3 < tokens.length) {
+		} else if (tokenStr == "latsna" && i + 3 < tokens.length) {
 			const src = isCI ? parseR(tokens[i + 3]) : parseR(tokens[i + 1]);
 			const dstl = isCI ? parseL(tokens[i + 1]) : parseL(tokens[i + 2]);
 			const dsth = isCI ? parseL(tokens[i + 2]) : parseL(tokens[i + 3]);
-			pushInstruction(new Instruction.Latsna(src, dstl, dsth), i);
+			builder.latsna(src, dstl, dsth);
 			i += 3;
-		} else if (token == "fi" && i + 3 < tokens.length && Cond.hasOwnProperty(tokens[i + 3].text)) {
+		} else if (tokenStr == "fi" && i + 3 < tokens.length && Cond.hasOwnProperty(tokens[i + 3].text)) {
 			const a = parseR(tokens[i + 1]);
 			const b = parseR(tokens[i + 2]);
-			pushInstruction(new Instruction.Fi(a, b, Cond[tokens[i + 3].text]), i);
+			builder.fi(a, b, Cond[tokens[i + 3].text]);
 			i += 3;
-		} else if (token == "inj" && i + 3 < tokens.length) {
+		} else if (tokenStr == "inj" && i + 3 < tokens.length) {
 			const a = isCI ? parseR(tokens[i + 3]) : parseR(tokens[i + 1]);
 			const b = parseL(tokens[i + 2]);
 			const c = isCI ? parseL(tokens[i + 1]) : parseL(tokens[i + 3]);
-			pushInstruction(new Instruction.Inj(a, b, c), i);
+			builder.inj(a, b, c);
 			i += 3;
-		} else if (token == "nll" && i + 1 < tokens.length) {
-			labels.push(parseLabel(tokens[i + 1]));
+		} else if (tokenStr == "nll" && i + 1 < tokens.length) {
+			builder.nll(tokens[i + 1].text);
 			i += 1;
-		} else if (token == "l'" && i + 1 < tokens.length) {
-			if (instructions.length == 0) {
-				throw new ParseError("l' must be preceded by an instruction");
-			}
-			if (instructions[instructions.length - 1].instruction == null) {
-				throw new ParseError("nll must not be followed by l'");
-			}
-			instructions[instructions.length - 1].labels.push(parseLabel(tokens[i + 1]));
+		} else if (tokenStr == "l'" && i + 1 < tokens.length) {
+			builder.l(parseLabel(tokens[i + 1]));
 			i += 1;
-		} else if (token == "kue" && i + 1 < tokens.length) {
-			kueList.push(parseLabel(tokens[i + 1]));
+		} else if (tokenStr == "kue" && i + 1 < tokens.length) {
+			builder.kue(parseLabel(tokens[i + 1]));
+			builder.setHasMain(false);
 			i += 1;
-		} else if (token == "xok" && i + 1 < tokens.length) {
-			xokList.push(parseLabel(tokens[i + 1]));
+		} else if (tokenStr == "xok" && i + 1 < tokens.length) {
+			builder.xok(parseLabel(tokens[i + 1]));
 			i += 1;
 		} else {
 			throw new ParseError("Unparsable command sequence " + tokens.map(t => t.text).slice(i).join(" "));
 		}
 	}
-	if (labels.length != 0) {
-		throw new ParseError("nll must be followed by an instruction");
-	}
-	return {instructions, kueList, xokList, hasMain: kueList.length == 0};
+	return builder.getParsedFile();
 }
 
 function parseRegister(token: string): Register {
@@ -208,50 +168,35 @@ function parseRegister(token: string): Register {
 	throw new ParseError("no register");
 }
 
-function parseR(token: Token): Value {
+function parseR(token: Token): Operand {
 	try {
 		return parseL(token);
 	} catch(_) {}
 	if (token.text.search(/^\d*$/) >= 0) {
-		return new Value.Pure(parseInt(token.text));
+		return {v: parseInt(token.text)};
 	}
 	if (isValidLabel(token.text)) {
-		return new Value.Label(token.text);
+		return token.text;
 	}
 	throw new ParseError(`cannot parse \`${token.text}\` as a valid data"`);
 }
 
-function parseL(token: Token): WritableValue {
+function parseL(token: Token): WritableOperand {
 	const tokenStr = token.text;
 	if (tokenStr.length == 2) {
-		return new Value.R(parseRegister(tokenStr));
+		return parseRegister(tokenStr);
 	}
 	let match;
 	if ((match = tokenStr.match(/^(..)@$/)) != null) {
-		return new Value.RPlusNum(parseRegister(match[1]), 0);
+		return [parseRegister(match[1])];
 	}
 	if ((match = tokenStr.match(/^(..)\+(\d*)@$/)) != null) {
-		return new Value.RPlusNum(parseRegister(match[1]), parseInt(match[2]));
+		return [parseRegister(match[1]), {v: parseInt(match[2])}];
 	}
 	if ((match = tokenStr.match(/^(..)\+(..)@$/)) != null) {
 		if (Register.hasOwnProperty(match[2])) {
-			return new Value.RPlusR(parseRegister(match[1]), parseRegister(match[2]));
+			return [parseRegister(match[1]), parseRegister(match[2])];
 		}
 	}
 	throw new ParseError(`cannot parse \`${tokenStr}\` as a valid place to put data`);
-}
-
-function isValidLabel(name: string): boolean {
-	return (
-		name.search(/^\d*$/) < 0 &&
-		REGISTER_RESERVED.indexOf(name) < 0 &&
-		name.search(/^[pFftcxkqhRzmnrljwbVvdsgXiyuoea0-9'_-]+$/) >= 0
-	);
-}
-
-function parseLabel(token: Token): string {
-	if (isValidLabel(token.text)) {
-		return token.text;
-	}
-	throw new ParseError(`\`${token.text}\` cannot be used as a valid label`);
 }
