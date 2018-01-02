@@ -1,7 +1,7 @@
 import React = require("react");
 
-import {Hardware} from "../2003lk/execute";
-import {SECTION_SIZE} from "../2003lk/memory";
+import {Hardware} from "../2003f/execute";
+import {SECTION_SIZE} from "../2003f/memory";
 const SECTION_LENGTH = 1 << SECTION_SIZE;
 
 interface HardwareStateProps{

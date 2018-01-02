@@ -1,7 +1,7 @@
-import {ParsedFile, fullParse as parseAsm} from "../2003lk/parse";
-import {fullParse as parseTinka} from "../tinka/parse";
-import {Program} from "../2003lk/linker";
-import {ParseError} from "../2003lk/types";
+import {ParsedFile, fullParse as parseAsm} from "../2003f/2003lk/parse";
+import {fullParse as parseTinka} from "../2003f/tinka/parse";
+import {Program} from "../2003f/linker";
+import {ParseError} from "../2003f/types";
 
 export {Program};
 

@@ -1,4 +1,4 @@
-import {Cond, Instruction, ParseError, Register, REGISTER_RESERVED, Token, Value, WritableValue} from "./types";
+import {Cond, Instruction, ParseError, Register, REGISTER_RESERVED, Token, Value, WritableValue} from "../types";
 
 export type LabeledInstruction = {
 	instruction: Instruction,

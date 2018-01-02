@@ -1,5 +1,5 @@
 import {MAX_SIZE, TentativeLoad, LoadedInstruction} from "./tentativeLoad";
-import {ParsedFile} from "./parse";
+import {ParsedFile} from "./2003lk/parse";
 import {ParseError} from "./types";
 
 export const initialAddress = 0x14830000|0;

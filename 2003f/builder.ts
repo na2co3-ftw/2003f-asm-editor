@@ -1,4 +1,4 @@
-import {LabeledInstruction, ParsedFile} from "./parse";
+import {LabeledInstruction, ParsedFile} from "./2003lk/parse";
 import {Instruction, Value, WritableValue, Cond, Register, Token} from "./types";
 
 export type WritableOperand = Register | [Register] | [Register, Register] | [Register, {v: number}];

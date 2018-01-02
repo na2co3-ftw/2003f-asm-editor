@@ -1,5 +1,5 @@
 import {Instruction, ParseError, Token} from "./types";
-import {ParsedFile} from "./parse";
+import {ParsedFile} from "./2003lk/parse";
 
 export const MAX_SIZE = 65536;
 

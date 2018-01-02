@@ -6,8 +6,8 @@ import {
 	Compare
 } from "./types";
 import {ParsedFile} from "../2003lk/parse";
-import {Cond, Register, REGISTER_RESERVED} from "../2003lk/types";
-import {AsmBuilder, WritableOperand, Operand, isImm} from "../2003lk/builder";
+import {Cond, Register, REGISTER_RESERVED} from "../types";
+import {AsmBuilder, WritableOperand, Operand, isImm} from "../builder";
 
 const MONO_OPERATORS = ["nac"];
 const BI_OPERATORS = [

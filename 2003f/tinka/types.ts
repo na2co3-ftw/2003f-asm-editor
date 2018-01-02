@@ -1,5 +1,5 @@
-import {Token} from "../2003lk/types";
-export {ParseError, RuntimeError, Token} from "../2003lk/types";
+import {Token} from "../types";
+export {ParseError, RuntimeError, Token} from "../types";
 
 export enum Compare {
 	xtlo, xylo, clo, xolo, llo, niv, xtlonys, xylonys, xolonys, llonys
