@@ -25,17 +25,17 @@ const SUPPORTS = [
 
 CodeMirror.defineSimpleMode("tinka", {
 	start: [
-		{regex: new RegExp(`(${OPERATORS.join("|")})(?![\\w'_-])`), token: "keyword"},
-		{regex: new RegExp(`(${COMPARES.join("|")})(?![\\w'_-])`), token: "builtin"},
-		{regex: new RegExp(`(${KEYWORDS.join("|")})(?![\\w'_-])`), token: "special"},
-		{regex: /rinyv(?![\w'_-])/, token: "special", indent: true},
-		{regex: /situv(?![\w'_-])/, token: "special", dedent: true},
-		{regex: new RegExp(`(${SUPPORTS.join("|")})(?![\\w'_-])`), token: "builtin"},
-		{regex: /\d+(?![\w'_-])/, token: "number"},
+		{regex: new RegExp(`(${OPERATORS.join("|")})(?![\\w'_]|-(?!-))`), token: "keyword"},
+		{regex: new RegExp(`(${COMPARES.join("|")})(?![\\w'_]|-(?!-))`), token: "builtin"},
+		{regex: new RegExp(`(${KEYWORDS.join("|")})(?![\\w'_]|-(?!-))`), token: "special"},
+		{regex: /rinyv(?![\w'_]|-(?!-))/, token: "special", indent: true},
+		{regex: /situv(?![\w'_]|-(?!-))/, token: "special", dedent: true},
+		{regex: new RegExp(`(${SUPPORTS.join("|")})(?![\\w'_]|-(?!-))`), token: "builtin"},
+		{regex: /\d+(?![\w'_]|-(?!-))/, token: "number"},
 		{regex: /@/, token: "operator"},
 		{regex: /--.*/, token: "comment"},
 		{regex: /[^\spFftcxkqhRzmnrljwbVvdsgXiyuoea0-9'_-]/, token: "error" },
-		{regex: /\S+/, token: null}
+		{regex: /([^\s-]|-(?!-))+/, token: null}
 	],
 	meta: {
 		lineComment: "--",
