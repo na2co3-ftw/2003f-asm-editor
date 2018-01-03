@@ -7,7 +7,7 @@ const SECTION_LENGTH = 1 << SECTION_SIZE;
 
 interface HardwareStateProps{
 	machine: Hardware;
-	executing: boolean;
+	active: boolean;
 }
 
 interface HardwareStateState {
@@ -70,7 +70,7 @@ export default class HardwareState extends React.Component<HardwareStateProps, H
 						16進数で表示する
 					</label>
 				</p>
-				<div className={!this.props.executing ? "out-not-executing": ""}>
+				<div className={!this.props.active ? "state-inactive": ""}>
 					<p className="monospace">
 						Registers:<br/>
 						<span className="lineparine">

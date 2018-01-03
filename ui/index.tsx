@@ -201,6 +201,7 @@ class App extends React.Component<{}, AppState> {
 						className="editor-pain"
 						ref={el => this.editor = el!}
 						markers={markers}
+						active={!this.state.executing}
 					/>
 
 					<div className="interpreter-pain">
@@ -229,7 +230,7 @@ class App extends React.Component<{}, AppState> {
 
 						<p className="errors">{this.state.runtimeErrors}</p>
 
-						<HardwareState machine={this.machine} executing={this.state.executing}/>
+						<HardwareState machine={this.machine} active={this.state.executing}/>
 					</div>
 				</div>
 			</div>

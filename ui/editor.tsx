@@ -43,6 +43,7 @@ export interface MarkerInfoM extends MarkerInfo {
 interface EditorProps {
 	className? : string;
 	markers: MarkerInfoM[]
+	active: boolean
 }
 
 interface EditorState {
@@ -237,7 +238,8 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 		};
 
 		return (
-			<div className={this.props.className || ""}>
+			<div className={(this.props.className || "") +
+			(!this.props.active ? " state-inactive" : "")}>
 				ファイルを開く: <input type="file" onChange={this.importChange} multiple/><br/>
 				<div>
 					{this.state.sources.map((source, id) =>

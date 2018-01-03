@@ -110,9 +110,16 @@ div {
 	background: rgba(255, 0, 0, 0.3);
 }
 
-.out-not-executing {
-	background: #ccc;
+.state-inactive {
+	background: #ddd;
 }
+.state-inactive .CodeMirror {
+	background: #ddd;
+}
+.state-inactive .CodeMirror-activeline-background {
+	background: #c8d0dd;
+}
+
 .out-memory-section {
 	display: inline-block;
 	margin: 0;
