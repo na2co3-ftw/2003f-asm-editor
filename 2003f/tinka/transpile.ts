@@ -180,7 +180,7 @@ function transpile(definitions: Definition[]): ParsedFile {
 				throw new ParseError("");
 			}
 			const pos = convertExpr(expr.pos, count);
-			if (pos instanceof Value.Pure) {
+			if (pos instanceof Value.Imm) {
 				return V.indRegDisp("f5", (ff.stackSize - ff.variables[expr.name] + pos.value + count) * 4);
 			} else {
 				builder.krz(pos, V.f1);

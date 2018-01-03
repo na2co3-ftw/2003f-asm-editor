@@ -109,7 +109,7 @@ function parse(tokens: Token[]): ParsedFile {
 		} else if (tokenStr == "'i'c") {
 			isCI = false;
 		} else if (tokenStr == "fen") {
-			builder.krz(V.f0, V.f0);
+			builder.fen();
 		} else if (tokenStr == "nac" && i + 1 < tokens.length) {
 			const dst = parseL(tokens[i + 1]);
 			builder.nac(dst);

@@ -51,7 +51,7 @@ export class AsmBuilder {
 		};
 	}
 
-	add(instruction: Instruction) {
+	private add(instruction: Instruction) {
 		let labeledInst: LabeledInstruction = {instruction, labels: this.nextLabels};
 		if (this.nextToken) {
 			labeledInst.token = this.nextToken;
@@ -62,7 +62,7 @@ export class AsmBuilder {
 	}
 
 	nac(dst: WritableValue) {
-		this.add(new Instruction.Dal(new Value.Pure(0), dst));
+		this.add(new Instruction.Nac(dst));
 	}
 
 	ata(src: Value, dst: WritableValue) {
@@ -109,6 +109,10 @@ export class AsmBuilder {
 
 	inj(a: Value, b: WritableValue, c: WritableValue) {
 		this.add(new Instruction.Inj(a, b, c));
+	}
+
+	fen() {
+		this.add(new Instruction.Fen());
 	}
 
 	binOp(mnemonic: string, src: Value, dst: WritableValue) {
@@ -176,12 +180,12 @@ function isValidLabel(name: string): boolean {
 
 // Utilities for Value
 export namespace V {
-	export function reg(register: Register): Value.R {
-		return new Value.R(register);
+	export function reg(register: Register): Value.Reg {
+		return new Value.Reg(register);
 	}
 
-	export function imm(value: number): Value.Pure {
-		return new Value.Pure(value);
+	export function imm(value: number): Value.Imm {
+		return new Value.Imm(value);
 	}
 
 	export function label(label: string): Value.Label {
@@ -191,24 +195,24 @@ export namespace V {
 		return new Value.Label(label);
 	}
 
-	export function indReg(register: Register): Value.RPlusNum {
-		return new Value.RPlusNum(register, 0);
+	export function indReg(register: Register): Value.IndReg {
+		return new Value.IndReg(register);
 	}
 
-	export function indRegDisp(register: Register, disp: number): Value.RPlusNum {
-		return new Value.RPlusNum(register, disp);
+	export function indRegDisp(register: Register, disp: number): Value.IndRegDisp {
+		return new Value.IndRegDisp(register, disp);
 	}
 
-	export function indRegReg(register1: Register, register2: Register): Value.RPlusR {
-		return new Value.RPlusR(register1, register2);
+	export function indRegReg(register1: Register, register2: Register): Value.IndRegReg {
+		return new Value.IndRegReg(register1, register2);
 	}
 
-	export const f0 = new Value.R("f0");
-	export const f1 = new Value.R("f1");
-	export const f2 = new Value.R("f2");
-	export const f3 = new Value.R("f3");
-	export const f5 = new Value.R("f5");
-	export const xx = new Value.R("xx");
+	export const f0 = new Value.Reg("f0");
+	export const f1 = new Value.Reg("f1");
+	export const f2 = new Value.Reg("f2");
+	export const f3 = new Value.Reg("f3");
+	export const f5 = new Value.Reg("f5");
+	export const xx = new Value.Reg("xx");
 
-	export const f5io = new Value.RPlusNum("f5", 0);
+	export const f5io = new Value.IndRegDisp("f5", 0);
 }

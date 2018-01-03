@@ -10,6 +10,7 @@ export class Token {
 	) {}
 }
 
+
 export type Register = "f0" | "f1" | "f2" | "f3" | "f5" | "xx";
 
 const REGISTERS = ["f0", "f1", "f2", "f3", "f5", "xx"];
@@ -17,6 +18,7 @@ const REGISTERS = ["f0", "f1", "f2", "f3", "f5", "xx"];
 export function isRegister(reg: string): reg is Register {
 	return REGISTERS.indexOf(reg) >= 0;
 }
+
 
 export interface Value {
 	getValue(hw: Hardware): number;
@@ -27,7 +29,7 @@ export interface WritableValue extends Value {
 }
 
 export namespace Value {
-	export class R implements WritableValue {
+	export class Reg implements WritableValue {
 		constructor(private r: Register) {}
 
 		getValue(hw: Hardware): number {
@@ -38,7 +40,18 @@ export namespace Value {
 		}
 	}
 
-	export class RPlusNum implements WritableValue {
+	export class IndReg implements WritableValue {
+		constructor(private r: Register) {}
+
+		getValue(hw: Hardware): number {
+			return hw.memory.read(hw.cpu.getRegister(this.r));
+		}
+		setValue(hw: Hardware, value: number) {
+			hw.memory.write(hw.cpu.getRegister(this.r), value);
+		}
+	}
+
+	export class IndRegDisp implements WritableValue {
 		private offset: number;
 
 		constructor(private r: Register, offset: number) {
@@ -55,7 +68,7 @@ export namespace Value {
 		}
 	}
 
-	export class RPlusR implements WritableValue {
+	export class IndRegReg implements WritableValue {
 		constructor(private r1: Register, private r2: Register) {}
 
 		getValue(hw: Hardware): number {
@@ -68,7 +81,7 @@ export namespace Value {
 		}
 	}
 
-	export class Pure implements Value {
+	export class Imm implements Value {
 		public value: number;
 
 		constructor(value: number) {
@@ -92,6 +105,7 @@ export namespace Value {
 		}
 	}
 }
+
 
 export interface Instruction {
 	exec(hw: Hardware): void;
@@ -138,6 +152,16 @@ export namespace Instruction {
 
 	export class Dtosna extends BinaryInstruction {
 		protected compute(a: number, b: number): number { return (b & 0xffffffe0) == 0 ? a >> b : 0; }
+	}
+
+	export class Nac implements Instruction {
+		constructor(
+			private dst: WritableValue
+		) {}
+
+		exec(hw: Hardware) {
+			this.dst.setValue(hw, ~this.dst.getValue(hw));
+		}
 	}
 
 	export class Lat implements Instruction {
@@ -214,7 +238,13 @@ export namespace Instruction {
 			this.c.setValue(hw, b);
 		}
 	}
+
+	export class Fen implements Instruction {
+		constructor() {}
+		exec(hw: Hardware) {}
+	}
 }
+
 
 export type Compare =
 	"xtlo" | "xylo" | "clo" | "xolo" | "llo" | "niv" |
@@ -236,11 +266,12 @@ const COMPARE_TO_FUNC: {[compare: string]: (a: number, b:number) => boolean} = {
 	xolonys: (a, b) => a >= b,
 	llonys: (a, b) => a > b,
 	niv: (a, b) => a != b,
-	xtlo: lif((a, b) => a <= b),
-	xylo: lif((a, b) => a < b),
-	xolo: lif((a, b) => a >= b),
-	llo: lif((a, b) => a > b),
+	xtlo: (a, b) => (a ^ 0x80000000) <= (b ^ 0x80000000),
+	xylo: (a, b) => (a ^ 0x80000000) < (b ^ 0x80000000),
+	xolo: (a, b) => (a ^ 0x80000000) >= (b ^ 0x80000000),
+	llo: (a, b) => (a ^ 0x80000000) > (b ^ 0x80000000),
 };
+
 
 export type LabeledInstruction = {
 	instruction: Instruction,
@@ -261,8 +292,4 @@ export class ParseError {
 
 export class RuntimeError {
 	constructor(public message: string) {}
-}
-
-function lif(f: (a: number, b: number) => boolean): (a: number, b: number) => boolean {
-	return (a, b) => f(a ^ 0x80000000, b ^ 0x80000000);
 }
