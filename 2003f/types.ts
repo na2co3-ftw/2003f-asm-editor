@@ -143,7 +143,7 @@ export namespace Instruction {
 	}
 
 	export class Dto extends BinaryInstruction {
-		protected compute(a: number, b: number): number { return (b & 0xffffffe0) == 0 ? a >>> b : 0; }
+		protected compute(a: number, b: number): number { return (b & 0xffffffe0) == 0 ? (a >>> b) | 0 : 0; }
 	}
 
 	export class Dro extends BinaryInstruction {
@@ -260,16 +260,16 @@ export function isCompare(compare: string): compare is Compare {
 }
 
 const COMPARE_TO_FUNC: {[compare: string]: (a: number, b:number) => boolean} = {
-	xtlonys: (a, b) => a <= b,
-	xylonys: (a, b) => a < b,
+	xtlo: (a, b) => a <= b,
+	xylo: (a, b) => a < b,
 	clo: (a, b) => a == b,
-	xolonys: (a, b) => a >= b,
-	llonys: (a, b) => a > b,
+	xolo: (a, b) => a >= b,
+	llo: (a, b) => a > b,
 	niv: (a, b) => a != b,
-	xtlo: (a, b) => (a ^ 0x80000000) <= (b ^ 0x80000000),
-	xylo: (a, b) => (a ^ 0x80000000) < (b ^ 0x80000000),
-	xolo: (a, b) => (a ^ 0x80000000) >= (b ^ 0x80000000),
-	llo: (a, b) => (a ^ 0x80000000) > (b ^ 0x80000000),
+	xtlonys: (a, b) => (a >>> 0) <= (b >>> 0),
+	xylonys: (a, b) => (a >>> 0) < (b >>> 0),
+	xolonys: (a, b) => (a >>> 0) >= (b >>> 0),
+	llonys: (a, b) => (a >>> 0) > (b >>> 0),
 };
 
 
