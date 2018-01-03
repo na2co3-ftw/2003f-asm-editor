@@ -165,7 +165,7 @@ function parseR(token: Token): Value {
 	try {
 		return parseL(token);
 	} catch(_) {}
-	if (token.text.search(/^\d*$/) >= 0) {
+	if (token.text.search(/^\d+$/) >= 0) {
 		return V.imm(parseInt(token.text));
 	}
 	try {
@@ -179,16 +179,20 @@ function parseL(token: Token): WritableValue {
 	if (isRegister(tokenStr)) {
 		return V.reg(tokenStr);
 	}
-	let match;
-	if ((match = tokenStr.match(/^(..)@$/)) != null) {
-		return V.indReg(match[1]);
-	}
-	if ((match = tokenStr.match(/^(..)\+(\d*)@$/)) != null) {
-		return V.indRegDisp(match[1], parseInt(match[2]));
-	}
-	if ((match = tokenStr.match(/^(..)\+(..)@$/)) != null) {
-		if (isRegister(match[2])) {
-			return V.indRegReg(match[1], match[2]);
+	let match = tokenStr.match(/^(..)(?:\+(.*))?@$/);
+	if (match != null) {
+		const left = match[1];
+		const right = match[2];
+		if (isRegister(left)) {
+			if (!right) {
+				return V.indReg(left);
+			}
+			if (isRegister(right)) {
+				return V.indRegReg(left, right);
+			}
+			if (right.search(/^\d+$/) >= 0) {
+				return V.indRegDisp(left, parseInt(right));
+			}
 		}
 	}
 	throw new ParseError(`cannot parse \`${tokenStr}\` as a valid place to put data`);

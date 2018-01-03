@@ -6,7 +6,8 @@
 		"strictNullChecks": true,
 		"jsx": "react",
 		"types": [],
-		"noUnusedLocals": true
+		"noUnusedLocals": true,
+		"noImplicitAny": true
 	},
 	"exclude": [
 		"node_modules"

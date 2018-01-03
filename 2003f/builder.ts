@@ -11,7 +11,7 @@ export class MissingPrecedingInstError extends BuilderError {}
 export class MissingFollowingInstError extends BuilderError {}
 export class CrossingLabelError extends BuilderError {}
 
-const BINARY_OPERATORS = {
+const BINARY_OPERATORS: {[mnemonic: string]: {new(src: Value, dst: WritableValue): Instruction}} = {
 	"krz": Instruction.Krz,
 	"kRz": Instruction.Krz,
 	"ata": Instruction.Ata,

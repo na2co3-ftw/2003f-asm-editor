@@ -44,7 +44,7 @@ class App extends React.Component<{}, AppState> {
 	private machine: Hardware = new Hardware();
 	private timeOutHandler: number | null = null;
 
-	constructor(props) {
+	constructor(props: {}) {
 		super(props);
 
 		this.state = {

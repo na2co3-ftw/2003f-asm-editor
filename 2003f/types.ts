@@ -23,7 +23,7 @@ export interface Value {
 }
 
 export interface WritableValue extends Value {
-	setValue(hw: Hardware, value: number);
+	setValue(hw: Hardware, value: number): void;
 }
 
 export namespace Value {
@@ -94,7 +94,7 @@ export namespace Value {
 }
 
 export interface Instruction {
-	exec(hw: Hardware);
+	exec(hw: Hardware): void;
 }
 
 export namespace Instruction {

@@ -26,7 +26,7 @@ export default class CodeMirrorComponent extends React.Component<CodeMirrorProps
 	private acceptEvents = false;
 	private textMarkers: CodeMirror.TextMarker[] = [];
 
-	constructor(props) {
+	constructor(props: CodeMirrorProps) {
 		super(props);
 
 		this.onChange = this.onChange.bind(this);
@@ -68,10 +68,11 @@ export default class CodeMirrorComponent extends React.Component<CodeMirrorProps
 
 		if (nextProps.option) {
 			for (let key of Object.keys(nextProps.option)) {
-				if (this.props.option && isEqual(this.props.option[key], nextProps.option[key])) {
+				if (this.props.option &&
+					isEqual((this.props.option as any)[key], (nextProps.option as any)[key])) {
 					continue;
 				}
-				this.editor.setOption(key, nextProps.option[key]);
+				this.editor.setOption(key, (nextProps.option as any)[key]);
 			}
 		}
 

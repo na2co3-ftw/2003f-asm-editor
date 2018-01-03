@@ -15,7 +15,7 @@ interface HardwareStateState {
 }
 
 export default class HardwareState extends React.Component<HardwareStateProps, HardwareStateState> {
-	constructor(props) {
+	constructor(props: HardwareStateProps) {
 		super(props);
 
 		this.state = {

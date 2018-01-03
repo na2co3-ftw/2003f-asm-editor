@@ -57,11 +57,11 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 	private lintOptions: CodeMirror.LintOptions;
 	private parser: CachedCompiler;
 
-	constructor(props) {
+	constructor(props: EditorProps) {
 		super(props);
 
 		this.lintOptions = {
-			getAnnotations: (newSource) => {
+			getAnnotations: (newSource: string) => {
 				const sources = this.state.sources.slice(0);
 				sources[this.state.fileId] = Object.assign({}, sources[this.state.fileId], {
 					source: newSource

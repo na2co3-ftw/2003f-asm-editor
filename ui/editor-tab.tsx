@@ -16,7 +16,7 @@ interface EditorTabState {
 }
 
 export default class EditorTab extends React.PureComponent<EditorTabProps, EditorTabState> {
-	constructor(props) {
+	constructor(props: EditorTabProps) {
 		super(props);
 
 		this.state = {renaming: false, renamingName: ""};

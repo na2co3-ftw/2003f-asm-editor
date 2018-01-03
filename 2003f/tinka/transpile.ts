@@ -2,7 +2,7 @@ import {Compare, ParsedFile, ParseError, Value, WritableValue} from "../types";
 import {Definition, Expression, parse, Statement, tokenize} from "./parse";
 import {AsmBuilder, V} from "../builder";
 
-const NEGATE_COMPARE = {
+const NEGATE_COMPARE: {[compare: string]: Compare} = {
 	xtlo: "llo",
 	xylo: "xolo",
 	clo: "niv",
@@ -74,7 +74,7 @@ function transpile(definitions: Definition[]): ParsedFile {
 				const left = convertExpr(stmt.left);
 				builder.krz(left, V.f0);
 				const right = convertExpr(stmt.right);
-				builder.fi(V.f0, right, negate(stmt.compare));
+				builder.fi(V.f0, right, NEGATE_COMPARE[stmt.compare]);
 				builder.malkrz(V.label(endlabel), V.xx);
 				transpileBlock(stmt.body, ff);
 				builder.nll(endlabel);
@@ -85,7 +85,7 @@ function transpile(definitions: Definition[]): ParsedFile {
 				builder.nll(headLabel);
 				builder.krz(left, V.f0);
 				const right = convertExpr(stmt.right);
-				builder.fi(V.f0, right, negate(stmt.compare));
+				builder.fi(V.f0, right, NEGATE_COMPARE[stmt.compare]);
 				builder.malkrz(V.label(endlabel), V.xx);
 				transpileBlock(stmt.body, ff);
 				builder.krz(V.label(headLabel), V.xx);
@@ -200,8 +200,4 @@ function transpile(definitions: Definition[]): ParsedFile {
 		}
 		return name + labelCount[name];
 	}
-}
-
-function negate(compare: Compare): Compare {
-	return NEGATE_COMPARE[compare];
 }
