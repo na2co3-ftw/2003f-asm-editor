@@ -14,6 +14,7 @@ import "../codemirror/mode/tinka/tinka";
 import CachedCompiler, {Program, SourceFile} from "./cached-compiler";
 import EditorTab from "./editor-tab";
 import EditorStatusBar from "./editor-status-bar";
+import {ParseError} from "../2003f/types";
 
 const DEFAULT_ASM_NAME = "fib_non_recursive";
 const DEFAULT_ASM = `'c'i    
@@ -49,7 +50,29 @@ interface EditorProps {
 interface EditorState {
 	fileId: number;
 	sources: SourceFile[];
-	parseErrors: string;
+	fileErrors: ParseError[][];
+	fileWarnings: ParseError[][];
+	linkErrors: ParseError[];
+	linkWarnings: ParseError[];
+}
+
+function parseErrorsToAnnotations(errors: ParseError[], severity: string): CodeMirror.Annotation[] {
+	let annotations: CodeMirror.Annotation[] = [];
+	for (const error of errors) {
+		if (error.token != null) {
+			let length =  error.token.text.length;
+			if (length == 0) {
+				length = 1;
+			}
+			annotations.push({
+				message: error.message,
+				severity,
+				from: CodeMirror.Pos(error.token.row, error.token.column),
+				to: CodeMirror.Pos(error.token.row, error.token.column + length)
+			});
+		}
+	}
+	return annotations;
 }
 
 export default class Editor extends React.Component<EditorProps, EditorState> {
@@ -63,26 +86,15 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 		this.lintOptions = {
 			getAnnotations: (newSource: string) => {
 				const sources = this.state.sources.slice(0);
-				sources[this.state.fileId] = Object.assign({}, sources[this.state.fileId], {
+				const fileId = this.state.fileId;
+				sources[fileId] = Object.assign({}, sources[fileId], {
 					source: newSource
 				});
 				this.parse(sources);
 
-				// console.log(p.tokens.map(t => t.toString()));
-				// asm.load(source);
-				// const errors = asm.errors.map(parseErrorToLintMarker("error"));
-				// const warnings = asm.warnings.map(parseErrorToLintMarker("warning"));
-				// return errors.concat(warnings);
-				//
-				// function parseErrorToLintMarker(severity) {
-				// 	return error => ({
-				// 		message: error.message,
-				// 		severity: severity,
-				// 		from: CodeMirror.Pos(error.token.lineNumber, error.token.columnNumber),
-				// 		to: CodeMirror.Pos(error.token.lineNumber, error.token.columnNumber + error.token.text.length)
-				// 	});
-				// }
-				return [];
+				const errors = parseErrorsToAnnotations(this.parser.fileErrors[fileId], "error");
+				const warnings = parseErrorsToAnnotations(this.parser.fileWarnings[fileId], "warning");
+				return errors.concat(warnings);
 			},
 			async: false,
 			hasGutters: true
@@ -93,7 +105,10 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 		this.state = {
 			fileId: 0,
 			sources: [{name: DEFAULT_ASM_NAME, source:DEFAULT_ASM, language: "2003lk"}],
-			parseErrors: ""
+			fileErrors: [],
+			fileWarnings: [],
+			linkErrors: [],
+			linkWarnings: []
 		};
 
 		this.editorChange = this.editorChange.bind(this);
@@ -206,7 +221,12 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 
 	private parse(sources: SourceFile[]): Program | null {
 		const program = this.parser.compile(sources);
-		this.setState({parseErrors: this.parser.getErrors().join(", ")});
+		this.setState({
+			fileErrors: this.parser.fileErrors,
+			fileWarnings: this.parser.fileWarnings,
+			linkErrors: this.parser.linkErrors,
+			linkWarnings: this.parser.linkWarnings
+		});
 		return program;
 	}
 
@@ -232,10 +252,12 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 			theme: "neat",
 			styleActiveLine: true,
 			lineNumbers: true,
-			// gutters: ["CodeMirror-lint-markers"],
+			gutters: ["CodeMirror-lint-markers"],
 			lint: this.lintOptions,
 			indentUnit: 4
 		};
+		const fileErrors = this.state.fileErrors[this.state.fileId] || [];
+		const fileWarnings = this.state.fileWarnings[this.state.fileId] || [];
 
 		return (
 			<div className={(this.props.className || "") +
@@ -268,7 +290,22 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 					file={this.state.sources[this.state.fileId]}
 					changeLanguage={this.changeLanguage}
 				/>
-				<p className="errors">{this.state.parseErrors}</p>
+				<p className="errors">
+					{fileErrors.map(error =>
+						error.token == null ? [error.message, <br/>] : null
+					)}
+					{this.state.linkErrors.map(error =>
+						error.token == null ? [error.message, <br/>] : null
+					)}
+				</p>
+				<p className="warnings">
+					{fileWarnings.map(error =>
+						error.token == null ? [error.message, <br/>]: null
+					)}
+					{this.state.linkWarnings.map(error =>
+						error.token == null ? [error.message, <br/>] : null
+					)}
+				</p>
 			</div>
 		);
 	}

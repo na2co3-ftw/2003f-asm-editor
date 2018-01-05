@@ -1,5 +1,5 @@
 import {
-	Compare, Instruction, LabeledInstruction, ParsedFile, ParseError, Register, Token, Value,
+	Compare, Instruction, LabeledInstruction, AsmModule, ParseError, Register, Token, Value,
 	WritableValue
 } from "./types";
 
@@ -27,6 +27,11 @@ const BINARY_OPERATORS: {[mnemonic: string]: {new(src: Value, dst: WritableValue
 	"malkRz": Instruction.MalKrz
 };
 
+const TERNARY_OPERATORS: {[mnemonic: string]: {new(src: Value, dstl: WritableValue, dsth: WritableValue): Instruction}} = {
+	"lat": Instruction.Lat,
+	"latsna": Instruction.Latsna
+};
+
 const RESERVED_REGISTERS = [
 	"f0", "f1", "f2", "f3", "f4", "f5", "f6", "f7", "xx"
 ];
@@ -39,7 +44,7 @@ export class AsmBuilder {
 	private nextLabels: string[] = [];
 	private nextToken: Token | null = null;
 
-	getParsedFile(): ParsedFile {
+	getAsmModule(): AsmModule {
 		if (this.nextLabels.length != 0) {
 			throw new MissingFollowingInstError("nll must be followed by an instruction");
 		}
@@ -123,8 +128,16 @@ export class AsmBuilder {
 		this.add(new Inst(src, dst));
 	}
 
+	triOp(mnemonic: string, src: Value, dstl: WritableValue, dsth: WritableValue) {
+		const Inst = TERNARY_OPERATORS[mnemonic];
+		if (!Inst) {
+			throw new InvalidArgumentError(`'${mnemonic}' is not a ternary operator`);
+		}
+		this.add(new Inst(src, dstl, dsth));
+	}
+
 	l(label: string) {
-		if (!isValidLabel(label)) {
+		if (!isValidAsmLabel(label)) {
 			throw new InvalidLabelNameError(`\`${label}\` cannot be used as a valid label`);
 		}
 		if (this.instructions.length == 0) {
@@ -137,21 +150,21 @@ export class AsmBuilder {
 	}
 
 	nll(label: string) {
-		if (!isValidLabel(label)) {
+		if (!isValidAsmLabel(label)) {
 			throw new InvalidLabelNameError(`\`${label}\` cannot be used as a valid label`);
 		}
 		this.nextLabels.push(label);
 	}
 
 	kue(label: string) {
-		if (!isValidLabel(label)) {
+		if (!isValidAsmLabel(label)) {
 			throw new InvalidLabelNameError(`\`${label}\` cannot be used as a valid label`);
 		}
 		this.kueList.push(label);
 	}
 
 	xok(label: string) {
-		if (!isValidLabel(label)) {
+		if (!isValidAsmLabel(label)) {
 			throw new InvalidLabelNameError(`\`${label}\` cannot be used as a valid label`);
 		}
 		this.xokList.push(label);
@@ -170,7 +183,7 @@ export class AsmBuilder {
 	}
 }
 
-function isValidLabel(name: string): boolean {
+export function isValidAsmLabel(name: string): boolean {
 	return (
 		name.search(/^\d*$/) < 0 &&
 		RESERVED_REGISTERS.indexOf(name) < 0 &&
@@ -189,7 +202,7 @@ export namespace V {
 	}
 
 	export function label(label: string): Value.Label {
-		if (!isValidLabel(label)) {
+		if (!isValidAsmLabel(label)) {
 			throw new InvalidLabelNameError(`\`${label}\` cannot be used as a valid label`);
 		}
 		return new Value.Label(label);

@@ -1,7 +1,7 @@
-import {Compare, isCompare, isRegister, ParsedFile, ParseError, Token, Value, WritableValue} from "../types";
+import {Compare, isCompare, isRegister, AsmModule, ParseError, Token, Value, WritableValue} from "../types";
 import {AsmBuilder, V} from "../builder";
 
-export function fullCompile(str: string, file: string = ""): ParsedFile {
+export function fullCompile(str: string, file: string = ""): AsmModule {
 	const ts = tokenize(str.replace(/\r\n?/g, "\n"), file);
 	return parse(associateExpr(ts));
 }
@@ -95,7 +95,7 @@ function associateExpr(tokens: Token[]): Token[] {
 	return ret;
 }
 
-function parse(tokens: Token[]): ParsedFile {
+function parse(tokens: Token[]): AsmModule {
 	let isCI = false;
 	let builder = new AsmBuilder();
 	builder.setHasMain(true);
@@ -158,7 +158,7 @@ function parse(tokens: Token[]): ParsedFile {
 			throw new ParseError("Unparsable command sequence " + tokens.map(t => t.text).slice(i).join(" "));
 		}
 	}
-	return builder.getParsedFile();
+	return builder.getAsmModule();
 }
 
 function parseR(token: Token): Value {

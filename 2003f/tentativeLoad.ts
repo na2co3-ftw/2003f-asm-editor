@@ -1,4 +1,4 @@
-import {Instruction, ParsedFile, ParseError, Token} from "./types";
+import {Instruction, AsmModule, ParseError, Token} from "./types";
 
 export const MAX_SIZE = 65536;
 
@@ -35,7 +35,7 @@ export class TentativeLoad {
 		return null;
 	}
 
-	static from(baseAddress: number, file: ParsedFile): TentativeLoad {
+	static from(baseAddress: number, file: AsmModule): TentativeLoad {
 		let tentativeAddressTable: {[address: number]: LoadedInstruction} = {};
 		let labelTable: {[label: string]: number} = {};
 		let localAddress = 0;

@@ -250,7 +250,7 @@ export type Compare =
 	"xtlo" | "xylo" | "clo" | "xolo" | "llo" | "niv" |
 	"xtlonys" | "xylonys" | "xolonys" | "llonys";
 
-const COMPARES = [
+export const COMPARES = [
 	"xtlo", "xylo", "clo", "xolo", "llo", "niv",
 	"xtlonys", "xylonys", "xolonys", "llonys"
 ];
@@ -279,7 +279,7 @@ export type LabeledInstruction = {
 	token?: Token;
 }
 
-export interface ParsedFile {
+export interface AsmModule {
 	instructions: LabeledInstruction[];
 	kueList: string[];
 	xokList: string[];
@@ -287,7 +287,7 @@ export interface ParsedFile {
 }
 
 export class ParseError {
-	constructor(public message: string) {}
+	constructor(public message: string, public token: Token | null = null) {}
 }
 
 export class RuntimeError {

@@ -1,5 +1,5 @@
 import {MAX_SIZE, TentativeLoad, LoadedInstruction} from "./tentativeLoad";
-import {ParsedFile, ParseError} from "./types";
+import {AsmModule, ParseError} from "./types";
 
 export const initialAddress = 0x14830000|0;
 
@@ -25,7 +25,7 @@ export class Program {
 		return null;
 	}
 
-	static link(files: ParsedFile[]): Program {
+	static link(files: AsmModule[]): Program {
 		let hasMain = false;
 		let loads: TentativeLoad[] = [];
 		let kueTable: {[label: string]: number} = {};

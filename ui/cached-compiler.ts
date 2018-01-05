@@ -1,7 +1,7 @@
 import {fullCompile as compileAsm} from "../2003f/2003lk/parse";
-import {fullCompile as compileTinka} from "../2003f/tinka/transpile";
+import {fullCompile as compileTinka} from "../2003f/tinka/compiler";
 import {Program} from "../2003f/linker";
-import {ParsedFile, ParseError} from "../2003f/types";
+import {AsmModule, ParseError} from "../2003f/types";
 import isEqual = require("lodash.isequal");
 
 export {Program};
@@ -9,14 +9,17 @@ export {Program};
 export interface SourceFile {
 	source: string;
 	name: string;
-	language: "2003lk"|"tinka";
+	language: "2003lk" | "tinka";
 }
 
 export default class CachedCompiler {
 	private parsedSources: SourceFile[];
-	private parsedFiles: (ParsedFile | null)[];
+	private parsedFiles: (AsmModule | null)[];
 	private parsedProgram: Program | null;
-	private errors: string[];
+	fileErrors: ParseError[][];
+	fileWarnings: ParseError[][];
+	linkErrors: ParseError[];
+	linkWarnings: ParseError[];
 
 	constructor() {
 		this.clear();
@@ -26,7 +29,10 @@ export default class CachedCompiler {
 		this.parsedSources = [];
 		this.parsedFiles = [];
 		this.parsedProgram = null;
-		this.errors = [];
+		this.fileErrors = [];
+		this.fileWarnings = [];
+		this.linkErrors = [];
+		this.linkWarnings = [];
 	}
 
 	compile(files: SourceFile[]): Program | null {
@@ -39,14 +45,22 @@ export default class CachedCompiler {
 			try {
 				if (file.language == "2003lk") {
 					this.parsedFiles[id] = compileAsm(file.source, file.name);
+					this.fileErrors[id] = [];
+					this.fileWarnings[id] = [];
 				} else {
-					this.parsedFiles[id] = compileTinka(file.source, file.name);
+					const {data, errors, warnings} = compileTinka(file.source, file.name);
+					this.fileErrors[id] = errors;
+					this.fileWarnings[id] = warnings;
+					this.parsedFiles[id] = data;
+					if (errors.length != 0) {
+						hasError = true;
+					}
 				}
-				this.errors[id] = "";
 			} catch (e) {
 				if (e instanceof ParseError) {
 					this.parsedFiles[id] = null;
-					this.errors[id] = e.message;
+					this.fileErrors[id] = [e];
+					this.fileWarnings[id] = [];
 					hasError = true;
 				} else {
 					throw e;
@@ -58,7 +72,8 @@ export default class CachedCompiler {
 		if (files.length != this.parsedSources.length) {
 			this.parsedSources.length = files.length;
 			this.parsedFiles.length = files.length;
-			this.errors.length = files.length + 1;
+			this.fileErrors.length = files.length;
+			this.fileWarnings.length = files.length;
 			shouldLink = true;
 		}
 
@@ -68,21 +83,19 @@ export default class CachedCompiler {
 		}
 		if (shouldLink) {
 			try {
-				this.parsedProgram = Program.link(this.parsedFiles as ParsedFile[]);
-				this.errors[files.length] = "";
+				this.parsedProgram = Program.link(this.parsedFiles as AsmModule[]);
+				this.linkErrors = [];
+				this.linkWarnings = [];
 			} catch (e) {
 				if (e instanceof ParseError) {
 					this.parsedProgram = null;
-					this.errors[files.length] = e.message;
+					this.linkErrors = [e];
+					this.linkWarnings = [];
 				} else {
 					throw e;
 				}
 			}
 		}
 		return this.parsedProgram;
-	}
-
-	getErrors(): string[] {
-		return this.errors.filter(e => e);
 	}
 }

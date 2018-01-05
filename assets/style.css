@@ -106,6 +106,10 @@ div {
 	color: red;
 }
 
+.warnings {
+	color: #fa0
+}
+
 .CodeMirror-pointer-nx {
 	background: rgba(255, 0, 0, 0.3);
 }
