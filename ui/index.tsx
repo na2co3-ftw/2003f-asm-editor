@@ -17,7 +17,7 @@ function Header() {
 	return (
 		<div>
 			<h2>
-				<span className="lineparine">2003f'd lkurftless</span> Editor
+				<span className="lineparine">2003'd ferlesyl</span> Editor
 			</h2>
 			<p>
 				<a href="https://github.com/na2co3-ftw/2003f-asm-editor" target="_blank">view on github</a>
