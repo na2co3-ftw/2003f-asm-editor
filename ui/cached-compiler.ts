@@ -15,7 +15,7 @@ export interface SourceFile {
 export default class CachedCompiler {
 	private parsedSources: SourceFile[];
 	private parsedFiles: (AsmModule | null)[];
-	private parsedProgram: Program | null;
+	program: Program | null;
 	fileErrors: ParseError[][];
 	fileWarnings: ParseError[][];
 	linkErrors: ParseError[];
@@ -28,14 +28,14 @@ export default class CachedCompiler {
 	clear() {
 		this.parsedSources = [];
 		this.parsedFiles = [];
-		this.parsedProgram = null;
+		this.program = null;
 		this.fileErrors = [];
 		this.fileWarnings = [];
 		this.linkErrors = [];
 		this.linkWarnings = [];
 	}
 
-	compile(files: SourceFile[]): Program | null {
+	compile(files: SourceFile[]) {
 		let shouldLink = false;
 		let hasError = false;
 		files.forEach((file, id) => {
@@ -78,17 +78,17 @@ export default class CachedCompiler {
 		}
 
 		if (hasError) {
-			this.parsedProgram = null;
+			this.program = null;
 			return null;
 		}
 		if (shouldLink) {
 			try {
-				this.parsedProgram = Program.link(this.parsedFiles as AsmModule[]);
+				this.program = Program.link(this.parsedFiles as AsmModule[]);
 				this.linkErrors = [];
 				this.linkWarnings = [];
 			} catch (e) {
 				if (e instanceof ParseError) {
-					this.parsedProgram = null;
+					this.program = null;
 					this.linkErrors = [e];
 					this.linkWarnings = [];
 				} else {
@@ -96,6 +96,5 @@ export default class CachedCompiler {
 				}
 			}
 		}
-		return this.parsedProgram;
 	}
 }

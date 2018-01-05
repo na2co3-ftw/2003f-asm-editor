@@ -108,6 +108,10 @@ export default class CodeMirrorComponent extends React.Component<CodeMirrorProps
 		this.editor.refresh();
 	}
 
+	performLint() {
+		this.editor.performLint();
+	}
+
 	render() {
 		return (
 			<div ref={(el) => this.el = el!}/>

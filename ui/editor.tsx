@@ -79,25 +79,24 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 	private cm: CodeMirrorComponent;
 	private lintOptions: CodeMirror.LintOptions;
 	private parser: CachedCompiler;
+	private chageTimeout: number | null = null;
 
 	constructor(props: EditorProps) {
 		super(props);
 
 		this.lintOptions = {
-			getAnnotations: (newSource: string) => {
-				const sources = this.state.sources.slice(0);
+			getAnnotations: () => {
 				const fileId = this.state.fileId;
-				sources[fileId] = Object.assign({}, sources[fileId], {
-					source: newSource
-				});
-				this.parse(sources);
-
-				const errors = parseErrorsToAnnotations(this.parser.fileErrors[fileId], "error");
-				const warnings = parseErrorsToAnnotations(this.parser.fileWarnings[fileId], "warning");
+				if (!this.state.fileErrors[fileId] || !this.state.fileWarnings[fileId]) {
+					return [];
+				}
+				const errors = parseErrorsToAnnotations(this.state.fileErrors[fileId], "error");
+				const warnings = parseErrorsToAnnotations(this.state.fileWarnings[fileId], "warning");
 				return errors.concat(warnings);
 			},
 			async: false,
-			hasGutters: true
+			hasGutters: true,
+			delay: 0
 		};
 
 		this.parser = new CachedCompiler();
@@ -118,6 +117,26 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 		this.closeTab = this.closeTab.bind(this);
 		this.renameFile = this.renameFile.bind(this);
 		this.changeLanguage = this.changeLanguage.bind(this);
+		this.parse = this.parse.bind(this);
+	}
+
+	componentDidUpdate(_: EditorProps, prevState: EditorState) {
+		if (this.state.fileId != prevState.fileId) {
+			this.cm.performLint();
+		} else {
+			const fileId = this.state.fileId;
+			if (this.state.fileErrors[fileId] != prevState.fileErrors[fileId] ||
+				this.state.fileWarnings[fileId] != prevState.fileWarnings[fileId]) {
+				this.cm.performLint();
+			}
+		}
+
+		if (this.state.sources != prevState.sources) {
+			if (this.chageTimeout != null) {
+				clearTimeout(this.chageTimeout);
+			}
+			this.chageTimeout = setTimeout(this.parse, 500);
+		}
 	}
 
 	private editorChange(editor: CodeMirror.Editor) {
@@ -219,15 +238,14 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 		});
 	}
 
-	private parse(sources: SourceFile[]): Program | null {
-		const program = this.parser.compile(sources);
+	private parse() {
+		this.parser.compile(this.state.sources);
 		this.setState({
-			fileErrors: this.parser.fileErrors,
-			fileWarnings: this.parser.fileWarnings,
+			fileErrors: this.parser.fileErrors.slice(0),
+			fileWarnings: this.parser.fileWarnings.slice(0),
 			linkErrors: this.parser.linkErrors,
 			linkWarnings: this.parser.linkWarnings
 		});
-		return program;
 	}
 
 	showFile(name: string) {
@@ -238,7 +256,8 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 	}
 
 	getProgram(): Program | null {
-		return this.parse(this.state.sources);
+		this.parse();
+		return this.parser.program;
 	}
 
 	refresh() {
@@ -271,6 +290,8 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 							name={source.name}
 							active={id == this.state.fileId}
 							closable={this.state.sources.length != 1}
+							hasError={(this.state.fileErrors[id] || []).length != 0}
+							hasWarning={(this.state.fileWarnings[id] || []).length != 0}
 							onClick={this.selectTab}
 							onClose={this.closeTab}
 							onRename={this.renameFile}

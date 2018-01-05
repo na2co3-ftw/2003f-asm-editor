@@ -5,6 +5,8 @@ interface EditorTabProps {
 	name: string;
 	active: boolean;
 	closable: boolean;
+	hasError: boolean;
+	hasWarning: boolean
 	onClick: (id: number) => void;
 	onClose: (id: number) => void;
 	onRename: (id: number, name: string) => void;
@@ -72,7 +74,12 @@ export default class EditorTab extends React.PureComponent<EditorTabProps, Edito
 	}
 
 	render() {
-		const className = this.props.active ? "editor-tab active" : "editor-tab";
+		let className = this.props.active ? "editor-tab active" : "editor-tab";
+		if (this.props.hasError) {
+			className += " error";
+		} else if (this.props.hasWarning) {
+			className += " warning";
+		}
 		return (
 			<span className={className} onClick={this.onClick}>
 				{this.state.renaming ?
