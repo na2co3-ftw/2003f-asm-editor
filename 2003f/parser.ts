@@ -20,7 +20,7 @@ export abstract class Parser<T> {
 		return {root, errors: this.errors, warnings: this.warnings};
 	}
 
-	abstract parseRoot(): T;
+	protected abstract parseRoot(): T;
 
 	protected isNotEOF(): boolean {
 		return this.index < this.tokens.length;

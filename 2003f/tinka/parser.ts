@@ -1,6 +1,6 @@
 import {Compare, COMPARES, isCompare, ParseError, Token} from "../types";
 import {Parser} from "../parser";
-import {isValidAsmLabel} from "../builder";
+import {isValidLabel} from "../2003lk/parser";
 
 export abstract class Definition {
 	constructor(public token: Token) {}
@@ -233,7 +233,7 @@ function isImproperVariable(text: string): boolean {
 export class TinkaParser extends Parser<{definitions: Definition[], hasMain: boolean}> {
 	private hasMain = false;
 
-	parseRoot(): {definitions: Definition[], hasMain: boolean} {
+	protected parseRoot(): {definitions: Definition[], hasMain: boolean} {
 		let definitions: Definition[] = [];
 		while (this.isNotEOF()) {
 			this.try(() => {
@@ -395,7 +395,7 @@ export class TinkaParser extends Parser<{definitions: Definition[], hasMain: boo
 
 	private parseLabel(strict: boolean = false): Name {
 		const token = this.take();
-		if (token != this.eof && isValidAsmLabel(token.text)) {
+		if (token != this.eof && isValidLabel(token.text)) {
 			if (strict) {
 				if (/^\d/.test(token.text) ||
 					RESERVED_KEYWORDS.indexOf(token.text) >= 0 ||
@@ -411,7 +411,7 @@ export class TinkaParser extends Parser<{definitions: Definition[], hasMain: boo
 
 	private parseCersvaName(strict: boolean = false): Name {
 		const token = this.take();
-		if (token != this.eof && isValidAsmLabel(token.text) && !/^\d/.test(token.text)) {
+		if (token != this.eof && isValidLabel(token.text) && !/^\d/.test(token.text)) {
 			if (strict) {
 				if (RESERVED_KEYWORDS.indexOf(token.text) >= 0 ||
 					RESERVED_LABEL_REGEXP.test(token.text)

@@ -1,17 +1,15 @@
-import {
-	Compare, Instruction, LabeledInstruction, AsmModule, ParseError, Register, Token, Value,
-	WritableValue
-} from "./types";
+import {AsmModule, Compare, Instruction, LabeledInstruction, Register, Token, Value, WritableValue} from "./types";
 
-export class BuilderError extends ParseError {}
+export class BuilderError {
+	constructor(public message: string) {}
+}
 
 export class InvalidArgumentError extends BuilderError {}
-export class InvalidLabelNameError extends BuilderError {}
 export class MissingPrecedingInstError extends BuilderError {}
 export class MissingFollowingInstError extends BuilderError {}
 export class CrossingLabelError extends BuilderError {}
 
-const BINARY_OPERATORS: {[mnemonic: string]: {new(src: Value, dst: WritableValue): Instruction}} = {
+const BINOP_INST: {[mnemonic: string]: {new(src: Value, dst: WritableValue): Instruction}} = {
 	"krz": Instruction.Krz,
 	"kRz": Instruction.Krz,
 	"ata": Instruction.Ata,
@@ -27,14 +25,16 @@ const BINARY_OPERATORS: {[mnemonic: string]: {new(src: Value, dst: WritableValue
 	"malkRz": Instruction.MalKrz
 };
 
-const TERNARY_OPERATORS: {[mnemonic: string]: {new(src: Value, dstl: WritableValue, dsth: WritableValue): Instruction}} = {
+const TRIOP_INST: {[mnemonic: string]: {new(src: Value, dstl: WritableValue, dsth: WritableValue): Instruction}} = {
 	"lat": Instruction.Lat,
 	"latsna": Instruction.Latsna
 };
 
-const RESERVED_REGISTERS = [
-	"f0", "f1", "f2", "f3", "f4", "f5", "f6", "f7", "xx"
-];
+export const BINARY_OPERATORS = Object.keys(BINOP_INST);
+
+export const TERNARY_OPERATORS = Object.keys(TRIOP_INST);
+
+
 
 export class AsmBuilder {
 	private instructions: LabeledInstruction[] = [];
@@ -121,7 +121,7 @@ export class AsmBuilder {
 	}
 
 	binOp(mnemonic: string, src: Value, dst: WritableValue) {
-		const Inst = BINARY_OPERATORS[mnemonic];
+		const Inst = BINOP_INST[mnemonic];
 		if (!Inst) {
 			throw new InvalidArgumentError(`'${mnemonic}' is not a binary operator`);
 		}
@@ -129,7 +129,7 @@ export class AsmBuilder {
 	}
 
 	triOp(mnemonic: string, src: Value, dstl: WritableValue, dsth: WritableValue) {
-		const Inst = TERNARY_OPERATORS[mnemonic];
+		const Inst = TRIOP_INST[mnemonic];
 		if (!Inst) {
 			throw new InvalidArgumentError(`'${mnemonic}' is not a ternary operator`);
 		}
@@ -137,36 +137,24 @@ export class AsmBuilder {
 	}
 
 	l(label: string) {
-		if (!isValidAsmLabel(label)) {
-			throw new InvalidLabelNameError(`\`${label}\` cannot be used as a valid label`);
-		}
 		if (this.instructions.length == 0) {
 			throw new MissingPrecedingInstError("l' must be preceded by an instruction");
 		}
 		if (this.nextLabels.length != 0) {
-			throw new CrossingLabelError("nll must be followed by an instruction");
+			throw new CrossingLabelError("nll must not be followed by l'");
 		}
 		this.instructions[this.instructions.length - 1].labels.push(label);
 	}
 
 	nll(label: string) {
-		if (!isValidAsmLabel(label)) {
-			throw new InvalidLabelNameError(`\`${label}\` cannot be used as a valid label`);
-		}
 		this.nextLabels.push(label);
 	}
 
 	kue(label: string) {
-		if (!isValidAsmLabel(label)) {
-			throw new InvalidLabelNameError(`\`${label}\` cannot be used as a valid label`);
-		}
 		this.kueList.push(label);
 	}
 
 	xok(label: string) {
-		if (!isValidAsmLabel(label)) {
-			throw new InvalidLabelNameError(`\`${label}\` cannot be used as a valid label`);
-		}
 		this.xokList.push(label);
 	}
 
@@ -179,16 +167,12 @@ export class AsmBuilder {
 	}
 
 	static isBinOp(mnemonic: string): boolean {
-		return !!BINARY_OPERATORS[mnemonic];
+		return !!BINOP_INST[mnemonic];
 	}
-}
 
-export function isValidAsmLabel(name: string): boolean {
-	return (
-		name.search(/^\d*$/) < 0 &&
-		RESERVED_REGISTERS.indexOf(name) < 0 &&
-		name.search(/^[pFftcxkqhRzmnrljwbVvdsgXiyuoea0-9'_-]+$/) >= 0
-	);
+	static isTriOp(mnemonic: string): boolean {
+		return !!TRIOP_INST[mnemonic];
+	}
 }
 
 // Utilities for Value
@@ -202,9 +186,6 @@ export namespace V {
 	}
 
 	export function label(label: string): Value.Label {
-		if (!isValidAsmLabel(label)) {
-			throw new InvalidLabelNameError(`\`${label}\` cannot be used as a valid label`);
-		}
 		return new Value.Label(label);
 	}
 

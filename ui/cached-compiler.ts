@@ -1,7 +1,7 @@
-import {fullCompile as compileAsm} from "../2003f/2003lk/parse";
+import {fullCompile as compileAsm} from "../2003f/2003lk/parser";
 import {fullCompile as compileTinka} from "../2003f/tinka/compiler";
 import {Program} from "../2003f/linker";
-import {AsmModule, ParseError} from "../2003f/types";
+import {AsmModule, CompileResult, ParseError} from "../2003f/types";
 import isEqual = require("lodash.isequal");
 
 export {Program};
@@ -42,32 +42,26 @@ export default class CachedCompiler {
 			if (isEqual(file, this.parsedSources[id])) {
 				return;
 			}
+			let result: CompileResult;
 			try {
 				if (file.language == "2003lk") {
-					this.parsedFiles[id] = compileAsm(file.source, file.name);
-					this.fileErrors[id] = [];
-					this.fileWarnings[id] = [];
+					result = compileAsm(file.source, file.name);
 				} else {
-					const {data, errors, warnings} = compileTinka(file.source, file.name);
-					this.fileErrors[id] = errors;
-					this.fileWarnings[id] = warnings;
-					this.parsedFiles[id] = data;
-					if (errors.length != 0) {
-						hasError = true;
-					}
+					result = compileTinka(file.source, file.name);
 				}
 			} catch (e) {
 				if (e instanceof ParseError) {
-					this.parsedFiles[id] = null;
-					this.fileErrors[id] = [e];
-					this.fileWarnings[id] = [];
-					hasError = true;
+					result = {data: null, errors: [e], warnings: []};
 				} else {
 					throw e;
 				}
 			}
+			this.parsedFiles[id] = result.data;
+			this.fileErrors[id] = result.errors;
+			this.fileWarnings[id] = result.warnings;
 			this.parsedSources[id] = Object.assign({}, file);
 			shouldLink = true;
+			hasError = result.errors.length != 0;
 		});
 		if (files.length != this.parsedSources.length) {
 			this.parsedSources.length = files.length;

@@ -290,6 +290,8 @@ export class ParseError {
 	constructor(public message: string, public token: Token | null = null) {}
 }
 
+export type CompileResult = {data: AsmModule | null, errors: ParseError[], warnings: ParseError[]};
+
 export class RuntimeError {
 	constructor(public message: string) {}
 }

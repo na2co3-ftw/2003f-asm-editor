@@ -1,4 +1,4 @@
-import {Compare, AsmModule, ParseError, Token, Value, WritableValue} from "../types";
+import {Compare, ParseError, Token, Value, WritableValue, CompileResult} from "../types";
 import {AnaxExpression, Definition, Expression, Statement, TinkaParser, tokenize} from "./parser";
 import {AsmBuilder, V} from "../builder";
 
@@ -13,8 +13,6 @@ const NEGATE_COMPARE: {[compare: string]: Compare} = {
 	llonys: "xtlonys",
 	xolonys: "xylonys"
 };
-
-type CompileResult = {data: AsmModule | null, errors: ParseError[], warnings: ParseError[]};
 
 export function fullCompile(str: string, file: string = ""): CompileResult {
 	const {tokens, eof} = tokenize(str.replace(/\r\n?/g, "\n"), file);
