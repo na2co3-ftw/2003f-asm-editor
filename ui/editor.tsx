@@ -10,8 +10,9 @@ import "codemirror/addon/lint/lint.css";
 
 import "../codemirror/mode/2003lk/2003lk";
 import "../codemirror/mode/tinka/tinka";
+import "../codemirror/mode/cent/cent";
 
-import CachedCompiler, {Program, SourceFile} from "./cached-compiler";
+import CachedCompiler, {LANGUAGES, Program, SourceFile} from "./cached-compiler";
 import EditorTab from "./editor-tab";
 import EditorStatusBar from "./editor-status-bar";
 import {ParseError} from "../2003f/types";
@@ -157,10 +158,18 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 				let source = (e.target as FileReader).result.replace(/\r\n?/g, "\n");
 				this.setState((state: EditorState) => {
 					const name = this.uniqueFileName(state.sources.length, file.name, state.sources);
+					let language = "2003lk";
+					if (name.endsWith(".tinka")) {
+						language = "tinka";
+					}
+					if (name.endsWith(".cent")) {
+						language = "cent";
+					}
+
 					const sources = [...state.sources, {
 						name,
 						source,
-						language: name.endsWith(".tinka") ? "tinka" : "2003lk"
+						language
 					}];
 					return {sources, fileId: sources.length - 1};
 				});
@@ -231,8 +240,10 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 	changeLanguage() {
 		this.setState((state: EditorState) => {
 			const sources = state.sources.slice(0);
+			const language = sources[state.fileId].language;
+			const newLanguage = LANGUAGES[(LANGUAGES.indexOf(language) + 1) % LANGUAGES.length];
 			sources[state.fileId] = Object.assign({}, sources[state.fileId], {
-				language: sources[state.fileId].language == "2003lk" ? "tinka" : "2003lk"
+				language: newLanguage
 			});
 			return {sources};
 		});

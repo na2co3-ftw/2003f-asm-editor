@@ -83,4 +83,8 @@ export abstract class Parser<T> {
 	protected warning(message: string, token: Token | null) {
 		this.warnings.push(new ParseError(message, token));
 	}
+
+	protected errorWithoutThrow(message: string, token: Token | null) {
+		this.errors.push(new ParseError(message, token));
+	}
 }

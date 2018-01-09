@@ -208,5 +208,7 @@ export namespace V {
 	export const f5 = new Value.Reg("f5");
 	export const xx = new Value.Reg("xx");
 
-	export const f5io = new Value.IndRegDisp("f5", 0);
+	export const f5io = new Value.IndReg("f5");
+	export const f5_4io = new Value.IndRegDisp("f5", 4);
+	export const f5_8io = new Value.IndRegDisp("f5", 8);
 }

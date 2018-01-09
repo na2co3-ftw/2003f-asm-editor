@@ -1,16 +1,21 @@
 import {fullCompile as compileAsm} from "../2003f/2003lk/parser";
 import {fullCompile as compileTinka} from "../2003f/tinka/compiler";
+import {fullCompile as compileCent} from "../2003f/cent/compiler";
 import {Program} from "../2003f/linker";
 import {AsmModule, CompileResult, ParseError} from "../2003f/types";
 import isEqual = require("lodash.isequal");
 
 export {Program};
 
+type Language = "2003lk" | "tinka" | "cent";
+
 export interface SourceFile {
 	source: string;
 	name: string;
-	language: "2003lk" | "tinka";
+	language: Language;
 }
+
+export const LANGUAGES: Language[] = ["2003lk", "tinka", "cent"];
 
 export default class CachedCompiler {
 	private parsedSources: SourceFile[];
@@ -46,8 +51,10 @@ export default class CachedCompiler {
 			try {
 				if (file.language == "2003lk") {
 					result = compileAsm(file.source, file.name);
-				} else {
+				} else if (file.language == "tinka") {
 					result = compileTinka(file.source, file.name);
+				} else {
+					result = compileCent(file.source, file.name);
 				}
 			} catch (e) {
 				if (e instanceof ParseError) {
