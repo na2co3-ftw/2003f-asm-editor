@@ -19,11 +19,24 @@ function Header() {
 			<h2>
 				<span className="lineparine">2003'd ferlesyl</span> Editor
 			</h2>
+		</div>
+	);
+}
+
+function Description() {
+	return (
+		<div>
 			<p>
 				<a href="https://github.com/na2co3-ftw/2003f-asm-editor" target="_blank">view on github</a>
 			</p>
 			<p>
 				<a href="http://jurliyuuri.com/OS/" target="_blank">悠里世界のOSのエミュレータ作ろうぜという計画</a>
+			</p>
+			<p>
+				<a href="https://github.com/Nobuyuki-Tokuchi/tinka" target="_blank">Nobuyuki-Tokuchi/tinka: 悠里OSでのBASICみたいなプログラミング言語</a>
+			</p>
+			<p>
+				<a href="https://github.com/Nobuyuki-Tokuchi/Cent" target="_blank">Nobuyuki-Tokuchi/Cent: 悠里OSでのスタック指向プログラミング言語</a>
 			</p>
 		</div>
 	);
@@ -232,6 +245,8 @@ class App extends React.Component<{}, AppState> {
 
 						<HardwareState machine={this.machine} active={this.state.executing}/>
 					</div>
+
+					<Description/>
 				</div>
 			</div>
 		);
