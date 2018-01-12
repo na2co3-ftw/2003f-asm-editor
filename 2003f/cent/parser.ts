@@ -128,19 +128,19 @@ function isWhiteSpace(char: string): boolean {
 }
 
 export class CentParser extends Parser<{operations: Operation[], subroutines: Subroutine[]}> {
+	private subroutines: Subroutine[] = [];
 	protected parseRoot(): {operations: Operation[]; subroutines: Subroutine[]} {
 		let operations: Operation[] = [];
-		let subroutines: Subroutine[] = [];
 		while (this.isNotEOF()) {
 			this.try(() => {
 				if (this.lookaheadString("<")) {
-					subroutines.push(this.parseSubroutine());
+					this.subroutines.push(this.parseSubroutine());
 				} else {
-					operations.push(this.parseOperation());
+					operations.push(this.parseOperation(false));
 				}
 			});
 		}
-		return {operations, subroutines};
+		return {operations, subroutines: this.subroutines};
 	}
 
 	private parseSubroutine(): Subroutine {
@@ -167,13 +167,23 @@ export class CentParser extends Parser<{operations: Operation[], subroutines: Su
 				return {name: nameToken, operations};
 			}
 			this.try(() => {
-				operations.push(this.parseOperation());
+				operations.push(this.parseOperation(true));
 			});
 		}
 		throw new ParseError("'>' expected", this.eof);
 	}
 
-	private parseOperation(): Operation {
+	private parseIfSubroutineInBlock(block: string): boolean {
+		if (this.lookaheadString("<")) {
+			const subroutine = this.parseSubroutine();
+			this.subroutines.push(subroutine);
+			this.warning(`Subroutine should not defined in '${block}'`, subroutine.name);
+			return true;
+		}
+		return false;
+	}
+
+	private parseOperation(inSubroutine: boolean): Operation {
 		const token = this.take();
 		if (/^\d+$/.test(token.text)) {
 			return new Operation.Number(token, parseInt(token.text));
@@ -193,7 +203,9 @@ export class CentParser extends Parser<{operations: Operation[], subroutines: Su
 					return new Operation.Fi(token, mal, null);
 				}
 				this.try(() => {
-					mal.push(this.parseOperation());
+					if (!inSubroutine && !this.parseIfSubroutineInBlock("fi")) {
+						mal.push(this.parseOperation(inSubroutine));
+					}
 				});
 			}
 
@@ -210,7 +222,9 @@ export class CentParser extends Parser<{operations: Operation[], subroutines: Su
 						return new Operation.Fi(token, mal, ol);
 					}
 					this.try(() => {
-						ol.push(this.parseOperation());
+						if (!inSubroutine && !this.parseIfSubroutineInBlock("fi")) {
+							ol.push(this.parseOperation(inSubroutine));
+						}
 					});
 				}
 			}
@@ -226,7 +240,9 @@ export class CentParser extends Parser<{operations: Operation[], subroutines: Su
 					return new Operation.Cecio(token, body);
 				}
 				this.try(() => {
-					body.push(this.parseOperation());
+					if (!inSubroutine && !this.parseIfSubroutineInBlock("cecio")) {
+						body.push(this.parseOperation(inSubroutine));
+					}
 				});
 			}
 			throw new ParseError("'oicec' expected", this.eof);
@@ -241,13 +257,15 @@ export class CentParser extends Parser<{operations: Operation[], subroutines: Su
 					return new Operation.Fal(token, body);
 				}
 				this.try(() => {
-					body.push(this.parseOperation());
+					if (!inSubroutine && !this.parseIfSubroutineInBlock("fal")) {
+						body.push(this.parseOperation(inSubroutine));
+					}
 				});
 			}
 			throw new ParseError("'laf' expected", this.eof);
 		}
 		if (token.text == "<" || token.text == ">") {
-			throw new ParseError("Unexpected token", token);
+			throw new ParseError(`Unexpected '${token.text}'`, token);
 		}
 		return new Operation.Primitive(token);
 	}
