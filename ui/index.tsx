@@ -7,8 +7,6 @@ import HardwareState from "./hardware-state";
 import {Hardware} from "../2003f/execute";
 import {RuntimeError, Token} from "../2003f/types";
 
-const TICK_TIME = 50;
-
 document.addEventListener("DOMContentLoaded", function () {
 	ReactDOM.render(<App/>, document.getElementById("root")!);
 });
@@ -49,6 +47,8 @@ interface AppState {
 	// timeOutHandler: number | null;
 	executing: boolean;
 	pausing: boolean;
+	tickInterval: number;
+	execSpeed: number;
 	runtimeErrors: string;
 }
 
@@ -64,6 +64,8 @@ class App extends React.Component<{}, AppState> {
 			liparxe: false,
 			executing: false,
 			pausing: false,
+			tickInterval: 20,
+			execSpeed: Math.floor(Math.log(1000 / 20) * 100 + 0.5),
 			runtimeErrors: ""
 		};
 
@@ -73,6 +75,7 @@ class App extends React.Component<{}, AppState> {
 		this.pause = this.pause.bind(this);
 		this.stop = this.stop.bind(this);
 		this.step = this.step.bind(this);
+		this.changeSpeed = this.changeSpeed.bind(this);
 	}
 
 
@@ -117,7 +120,7 @@ class App extends React.Component<{}, AppState> {
 				return;
 			}
 		}
-		this.timeOutHandler = setTimeout(this.executeTick, TICK_TIME);
+		this.timeOutHandler = setTimeout(this.executeTick, this.state.tickInterval);
 		this.setState({pausing: false});
 	}
 
@@ -125,7 +128,7 @@ class App extends React.Component<{}, AppState> {
 		this.timeOutHandler = null;
 		const continuing = this.execOneStep();
 		if (continuing) {
-			this.timeOutHandler = setTimeout(this.executeTick, TICK_TIME);
+			this.timeOutHandler = setTimeout(this.executeTick, this.state.tickInterval);
 		} else {
 			this.setState({executing: false, pausing: false});
 		}
@@ -173,6 +176,13 @@ class App extends React.Component<{}, AppState> {
 		if (nxToken != null) {
 			this.editor.showFile(nxToken.file);
 		}
+	}
+
+	private changeSpeed(e: React.ChangeEvent<HTMLInputElement>) {
+		this.setState({
+			tickInterval: 1000 / Math.exp(e.target.valueAsNumber / 100),
+			execSpeed: e.target.valueAsNumber
+		});
 	}
 
 	private getCurrentNXToken(): Token | null {
@@ -240,6 +250,13 @@ class App extends React.Component<{}, AppState> {
 							onClick={this.stop}
 							disabled={!this.state.executing}
 						>終了</button>
+
+						<br/>
+
+						実行速度: <input
+							type="range" min="70" max="600" step="1"
+							value={this.state.execSpeed} onChange={this.changeSpeed}
+						/>
 
 						<p className="errors">{this.state.runtimeErrors}</p>
 
