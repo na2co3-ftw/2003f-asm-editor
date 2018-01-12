@@ -22,10 +22,12 @@
     "webpack": "^3.3.0"
   },
   "dependencies": {
+    "@types/classnames": "^2.2.3",
     "@types/codemirror": "0.0.47",
     "@types/lodash.isequal": "^4.5.2",
     "@types/react": "^16.0.9",
     "@types/react-dom": "^16.0.0",
+    "classnames": "^2.2.5",
     "codemirror": "^5.30.0",
     "lodash.isequal": "^4.5.0",
     "react": "^16.0.0",

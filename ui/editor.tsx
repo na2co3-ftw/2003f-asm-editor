@@ -1,4 +1,5 @@
 import React = require("react");
+import classNames = require("classnames");
 import CodeMirror = require("codemirror");
 import CodeMirrorComponent, {MarkerInfo} from "./codemirror-component";
 
@@ -333,9 +334,11 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 		const fileErrors = this.state.fileErrors[this.state.fileId] || [];
 		const fileWarnings = this.state.fileWarnings[this.state.fileId] || [];
 
+		const className = classNames(this.props.className, {
+			"state-inactive": !this.props.active
+		});
 		return (
-			<div className={(this.props.className || "") +
-			(!this.props.active ? " state-inactive" : "")}>
+			<div className={className}>
 				ファイルを開く: <input type="file" onChange={this.importChange} multiple/><br/>
 				<div>
 					{this.state.sources.map((source, id) =>

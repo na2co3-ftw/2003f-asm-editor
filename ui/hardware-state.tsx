@@ -1,4 +1,5 @@
 import React = require("react");
+import classNames = require("classnames");
 
 import {Hardware} from "../2003f/execute";
 import {SECTION_SIZE} from "../2003f/memory";
@@ -143,9 +144,12 @@ const MemorySection: React.SFC<MemorySectionProps> = (props) => {
 	}
 	memoryHTML += "<br>";
 
+	const className = classNames("out-memory-section", {
+		separator: props.separator
+	});
 	return (
 		<span
-			className={props.separator ? "out-memory-section separator" : "out-memory-section"}
+			className={className}
 			dangerouslySetInnerHTML={{__html: memoryHTML}}
 		/>
 	);

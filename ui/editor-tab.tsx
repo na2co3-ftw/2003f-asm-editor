@@ -1,4 +1,5 @@
 import React = require("react");
+import classNames = require("classnames");
 
 interface EditorTabProps {
 	id: number;
@@ -74,12 +75,11 @@ export default class EditorTab extends React.PureComponent<EditorTabProps, Edito
 	}
 
 	render() {
-		let className = this.props.active ? "editor-tab active" : "editor-tab";
-		if (this.props.hasError) {
-			className += " error";
-		} else if (this.props.hasWarning) {
-			className += " warning";
-		}
+		let className = classNames("editor-tab", {
+			active: this.props.active,
+			error: this.props.hasError,
+			warning: !this.props.hasError && this.props.hasWarning
+		});
 		return (
 			<span className={className} onClick={this.onClick}>
 				{this.state.renaming ?
