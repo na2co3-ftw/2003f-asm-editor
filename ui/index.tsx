@@ -7,6 +7,8 @@ import HardwareState from "./hardware-state";
 import {Hardware} from "../2003f/execute";
 import {RuntimeError, Token} from "../2003f/types";
 
+import "./style.css";
+
 document.addEventListener("DOMContentLoaded", function () {
 	ReactDOM.render(<App/>, document.getElementById("root")!);
 });
