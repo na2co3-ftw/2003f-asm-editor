@@ -1,7 +1,6 @@
 import React = require("react");
 import classNames = require("classnames");
 import CodeMirror = require("codemirror");
-import CodeMirrorComponent, {MarkerInfo} from "./codemirror-component";
 
 import "codemirror/theme/neat.css";
 
@@ -14,8 +13,10 @@ import "../codemirror/mode/tinka/tinka";
 import "../codemirror/mode/cent/cent";
 
 import CachedCompiler, {LANGUAGES, Program, SourceFile} from "./cached-compiler";
+import CodeMirrorComponent, {MarkerInfo} from "./codemirror-component";
 import EditorTab from "./editor-tab";
 import EditorStatusBar from "./editor-status-bar";
+
 import {ParseError, Token} from "../2003f/types";
 
 const DEFAULT_ASM_NAME = "fib_non_recursive";

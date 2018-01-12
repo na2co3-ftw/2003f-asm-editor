@@ -3,11 +3,10 @@ import ReactDOM = require("react-dom");
 
 import Editor, {MarkerInfoM} from "./editor";
 import HardwareState from "./hardware-state";
+import "./style.css";
 
 import {Hardware} from "../2003f/execute";
 import {RuntimeError, Token} from "../2003f/types";
-
-import "./style.css";
 
 document.addEventListener("DOMContentLoaded", function () {
 	ReactDOM.render(<App/>, document.getElementById("root")!);

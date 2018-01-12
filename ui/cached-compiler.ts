@@ -1,9 +1,10 @@
+import isEqual = require("lodash.isequal");
+
 import {fullCompile as compileAsm} from "../2003f/2003lk/parser";
 import {fullCompile as compileTinka} from "../2003f/tinka/compiler";
 import {fullCompile as compileCent} from "../2003f/cent/compiler";
 import {linkModules, Program} from "../2003f/linker";
 import {AsmModule, CompileResult, ParseError} from "../2003f/types";
-import isEqual = require("lodash.isequal");
 
 export {Program};
 

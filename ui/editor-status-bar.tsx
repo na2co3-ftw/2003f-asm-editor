@@ -1,4 +1,5 @@
 import React = require("react");
+
 import {SourceFile} from "./cached-compiler";
 
 interface EditorStatusBarProps {

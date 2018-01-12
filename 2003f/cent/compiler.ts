@@ -1,5 +1,5 @@
-import {AsmBuilder, V} from "../builder";
 import {AsmModule, CompileResult, isCompare, ParseError} from "../types";
+import {AsmBuilder, V} from "../builder";
 import {BI_OPERATORS, CentParser, Operation, Subroutine, tokenize, TRI_OPERATORS} from "./parser";
 
 export function fullCompile(str: string, file: string = ""): CompileResult {

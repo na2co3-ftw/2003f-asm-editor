@@ -3,7 +3,7 @@ import classNames = require("classnames");
 
 import {Hardware} from "../2003f/execute";
 import {SECTION_SIZE} from "../2003f/memory";
-import {ReactNode} from "react";
+
 const SECTION_LENGTH = 1 << SECTION_SIZE;
 
 interface HardwareStateProps{
@@ -33,7 +33,7 @@ export default class HardwareState extends React.Component<HardwareStateProps, H
 	render() {
 		const machine: Hardware = this.props.machine;
 
-		let memoryNodes: ReactNode[] = [];
+		let memoryNodes: React.ReactNode[] = [];
 		let notFirstLine = false;
 		let prevSection = -2;
 		const sections = machine.memory.usingSections.slice(0);

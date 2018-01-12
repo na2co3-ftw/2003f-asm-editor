@@ -1,6 +1,6 @@
 import {Compare, ParseError, Token, Value, WritableValue, CompileResult} from "../types";
-import {AnaxExpression, Definition, Expression, Statement, TinkaParser, tokenize} from "./parser";
 import {AsmBuilder, V} from "../builder";
+import {AnaxExpression, Definition, Expression, Statement, TinkaParser, tokenize} from "./parser";
 
 const NEGATE_COMPARE: {[compare: string]: Compare} = {
 	xtlo: "llo",
