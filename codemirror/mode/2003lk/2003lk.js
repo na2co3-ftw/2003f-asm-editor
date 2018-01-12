@@ -39,7 +39,7 @@ CodeMirror.defineSimpleMode("2003lk", {
 		{regex: /\d+(?![\w'_-])/, token: "number"},
 		{regex: /[@+]/, token: "operator"},
 		{regex: /;.*/, token: "comment"},
-		{regex: /[^\spFftcxkqhRzmnrljwbVvdsgXiyuoea0-9'_-]/, token: "error" },
+		{regex: /[^\sFRVXa-z0-9'_-]/, token: "error" },
 		{regex: /\S+/, token: null}
 	],
 	meta: {

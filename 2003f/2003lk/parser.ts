@@ -87,7 +87,7 @@ export function isValidLabel(name: string): boolean {
 	return (
 		name.search(/^\d*$/) < 0 &&
 		RESERVED_REGISTERS.indexOf(name) < 0 &&
-		name.search(/^[pFftcxkqhRzmnrljwbVvdsgXiyuoea0-9'_-]+$/) >= 0
+		name.search(/^[FRVXa-z0-9'_-]+$/) >= 0
 	);
 }
 

@@ -227,7 +227,7 @@ function isWhiteSpace(char: string): boolean {
 function isImproperVariable(text: string): boolean {
 	return /^\d*$/.test(text) ||
 		RESERVED_KEYWORDS.indexOf(text) >= 0 ||
-		/[^\spFftcxkqhRzmnrljwbVvdsgXiyuoea0-9'_-]/.test(text);
+		/[^\sFRVXa-z0-9'_-]/.test(text);
 }
 
 export class TinkaParser extends Parser<{definitions: Definition[], hasMain: boolean}> {

@@ -34,7 +34,6 @@ CodeMirror.defineSimpleMode("tinka", {
 		{regex: /\d+(?![\w'_]|-(?!-))/, token: "number"},
 		{regex: /@/, token: "operator"},
 		{regex: /--.*/, token: "comment"},
-		{regex: /[^\spFftcxkqhRzmnrljwbVvdsgXiyuoea0-9'_-]/, token: "error" },
 		{regex: /([^\s-]|-(?!-))+/, token: null}
 	],
 	meta: {

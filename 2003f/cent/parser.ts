@@ -155,7 +155,8 @@ export class CentParser extends Parser<{operations: Operation[], subroutines: Su
 			KEYWORDS.indexOf(nameToken.text) >= 0) {
 			this.errorWithoutThrow("Invalid subroutine name", nameToken);
 		}
-		if (RESERVED_KEYWORDS.indexOf(nameToken.text) >= 0) {
+		if (RESERVED_KEYWORDS.indexOf(nameToken.text) >= 0 ||
+			/[^\sFRVXa-z0-9,.?!':+|=$\\@&#"()《》_-]/.test(nameToken.text)) {
 			this.warning("Improper subroutine name", nameToken);
 		}
 
