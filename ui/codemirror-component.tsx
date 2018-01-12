@@ -17,6 +17,8 @@ interface CodeMirrorProps {
 	value?: string;
 	option?: CodeMirror.EditorConfiguration;
 	onChange?: (instance: CodeMirror.Editor, change: CodeMirror.EditorChangeLinkedList) => void;
+	onDragOver?: (event: DragEvent) => void;
+	onDrop?: (event: DragEvent) => void;
 	markers?: MarkerInfo[];
 }
 
@@ -30,11 +32,25 @@ export default class CodeMirrorComponent extends React.Component<CodeMirrorProps
 		super(props);
 
 		this.onChange = this.onChange.bind(this);
+		this.onDragOver = this.onDragOver.bind(this);
+		this.onDrop = this.onDrop.bind(this);
 	}
 
 	private onChange(instance: CodeMirror.Editor, change: CodeMirror.EditorChangeLinkedList) {
 		if (this.acceptEvents && this.props.onChange) {
 			this.props.onChange(instance, change);
+		}
+	}
+
+	private onDragOver(instance: CodeMirror.Editor, event: Event) {
+		if (this.props.onDragOver) {
+			this.props.onDragOver(event as DragEvent);
+		}
+	}
+
+	private onDrop(instance: CodeMirror.Editor, event: Event) {
+		if (this.props.onDrop) {
+			this.props.onDrop(event as DragEvent);
 		}
 	}
 
@@ -45,6 +61,8 @@ export default class CodeMirrorComponent extends React.Component<CodeMirrorProps
 			this.editor.setValue(this.props.value);
 		}
 		this.editor.on("change", this.onChange);
+		this.editor.on("dragover", this.onDragOver);
+		this.editor.on("drop", this.onDrop);
 
 		this.acceptEvents = true;
 	}

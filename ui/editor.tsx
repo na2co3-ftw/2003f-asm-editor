@@ -81,6 +81,7 @@ function parseErrorsToAnnotations(errors: ParseError[], severity: string): CodeM
 export default class Editor extends React.Component<EditorProps, EditorState> {
 	private cm: CodeMirrorComponent;
 	private lintOptions: CodeMirror.LintOptions;
+	private openFileInput: HTMLInputElement;
 	private parser: CachedCompiler;
 	private chageTimeout: number | null = null;
 
@@ -114,7 +115,10 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 		};
 
 		this.editorChange = this.editorChange.bind(this);
-		this.importChange = this.importChange.bind(this);
+		this.showOpenFileDialog = this.showOpenFileDialog.bind(this);
+		this.onFileOpenInputChanged = this.onFileOpenInputChanged.bind(this);
+		// this.onEditorDragOver = this.onEditorDragOver.bind(this);
+		this.onEditorDrop = this.onEditorDrop.bind(this);
 		this.newTab = this.newTab.bind(this);
 		this.selectTab = this.selectTab.bind(this);
 		this.closeTab = this.closeTab.bind(this);
@@ -153,8 +157,19 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 		});
 	}
 
-	private importChange(e: React.ChangeEvent<HTMLInputElement>) {
-		for (const file of Array.from(e.target.files!)) {
+	private showOpenFileDialog() {
+		let event = document.createEvent("MouseEvents");
+		event.initMouseEvent("click", true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+		this.openFileInput.dispatchEvent(event);
+	}
+
+	private onFileOpenInputChanged(e: React.ChangeEvent<HTMLInputElement>) {
+		this.openFiles(e.target.files!);
+		e.target.value = "";
+	}
+
+	private openFiles(files: FileList) {
+		for (const file of Array.from(files)) {
 			const reader = new FileReader();
 			reader.addEventListener("load", e => {
 				let source = (e.target as FileReader).result.replace(/\r\n?/g, "\n");
@@ -178,6 +193,21 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 			});
 			reader.readAsText(file);
 		}
+	}
+
+	private onEditorDragOver(event: DragEvent) {
+		if (event.dataTransfer.files.length == 0) {
+			return;
+		}
+		event.preventDefault();
+	}
+
+	private onEditorDrop(event: DragEvent) {
+		if (event.dataTransfer.files.length == 0) {
+			return;
+		}
+		this.openFiles(event.dataTransfer.files);
+		event.preventDefault();
 	}
 
 	private newTab() {
@@ -339,8 +369,16 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 			"state-inactive": !this.props.active
 		});
 		return (
-			<div className={className}>
-				ファイルを開く: <input type="file" onChange={this.importChange} multiple/><br/>
+			<div className={className} >
+				<button onClick={this.showOpenFileDialog}>ファイルを開く</button>
+				<input
+					type="file"
+					ref={(el => this.openFileInput = el!)}
+					style={{display: "none"}}
+					onChange={this.onFileOpenInputChanged}
+					multiple
+				/>
+
 				<div>
 					{this.state.sources.map((source, id) =>
 						<EditorTab
@@ -364,6 +402,8 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 					option={cmOption}
 					markers={this.props.markers.filter(marker => marker.file == currentFile.name)}
 					onChange={this.editorChange}
+					onDragOver={this.onEditorDragOver}
+					onDrop={this.onEditorDrop}
 					ref={(el => this.cm = el!)}
 				/>
 				<EditorStatusBar
