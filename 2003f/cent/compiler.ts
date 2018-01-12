@@ -13,7 +13,7 @@ export function fullCompile(str: string, file: string = ""): CompileResult {
 		};
 	}
 
-	const compiled = new CentCompiler(parsed.root.operations, parsed.root.subroutines).compile();
+	const compiled = new CentCompiler(parsed.root.operations, parsed.root.subroutines, file).compile();
 	return {
 		data: compiled.data,
 		errors: tokenized.errors.concat(parsed.errors, compiled.errors),
@@ -22,7 +22,7 @@ export function fullCompile(str: string, file: string = ""): CompileResult {
 }
 
 class CentCompiler {
-	private builder = new AsmBuilder();
+	private builder: AsmBuilder;
 
 	private cecioCount = 0;
 	private falCount = 0;
@@ -37,7 +37,9 @@ class CentCompiler {
 	private errors: ParseError[] = [];
 	private warnings: ParseError[] = [];
 
-	constructor(private operations: Operation[], private subroutines: Subroutine[]) {}
+	constructor(private operations: Operation[], private subroutines: Subroutine[], name: string) {
+		this.builder = new AsmBuilder(name);
+	}
 
 	compile(): {data: AsmModule, errors: ParseError[], warnings: ParseError[]} {
 		for (const sub of this.subroutines) {

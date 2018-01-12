@@ -251,11 +251,41 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 
 	private parse() {
 		this.parser.compile(this.state.sources);
+
+		let fileErrors = this.parser.fileErrors.map(es => es.slice(0));
+		let linkErrors: ParseError[] = [];
+		this.parser.linkErrors.forEach(error => {
+			if (error.token) {
+				for (let i = 0; i < this.state.sources.length; i++) {
+					if (this.state.sources[i].name == error.token.file) {
+						fileErrors[i].push(error);
+						return;
+					}
+				}
+			}
+			linkErrors.push(error);
+		});
+
+
+		let fileWarnings = this.parser.fileWarnings.map(es => es.slice(0));
+		let linkWarnings: ParseError[] = [];
+		this.parser.linkWarnings.forEach(warning => {
+			if (warning.token) {
+				for (let i = 0; i < this.state.sources.length; i++) {
+					if (this.state.sources[i].name == warning.token.file) {
+						fileWarnings[i].push(warning);
+						return;
+					}
+				}
+			}
+			linkWarnings.push(warning);
+		});
+
 		this.setState({
-			fileErrors: this.parser.fileErrors.slice(0),
-			fileWarnings: this.parser.fileWarnings.slice(0),
-			linkErrors: this.parser.linkErrors,
-			linkWarnings: this.parser.linkWarnings
+			fileErrors: fileErrors,
+			fileWarnings: fileWarnings,
+			linkErrors: linkErrors,
+			linkWarnings: linkWarnings
 		});
 	}
 
@@ -327,7 +357,7 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 						error.token == null ? [error.message, <br/>] : null
 					)}
 					{this.state.linkErrors.map(error =>
-						error.token == null ? [error.message, <br/>] : null
+						[error.message, <br/>]
 					)}
 				</p>
 				<p className="warnings">
@@ -335,7 +365,7 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 						error.token == null ? [error.message, <br/>]: null
 					)}
 					{this.state.linkWarnings.map(error =>
-						error.token == null ? [error.message, <br/>] : null
+						[error.message, <br/>]
 					)}
 				</p>
 			</div>

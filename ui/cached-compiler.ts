@@ -1,7 +1,7 @@
 import {fullCompile as compileAsm} from "../2003f/2003lk/parser";
 import {fullCompile as compileTinka} from "../2003f/tinka/compiler";
 import {fullCompile as compileCent} from "../2003f/cent/compiler";
-import {Program} from "../2003f/linker";
+import {linkModules, Program} from "../2003f/linker";
 import {AsmModule, CompileResult, ParseError} from "../2003f/types";
 import isEqual = require("lodash.isequal");
 
@@ -47,6 +47,7 @@ export default class CachedCompiler {
 			if (isEqual(file, this.parsedSources[id])) {
 				return;
 			}
+
 			let result: CompileResult;
 			try {
 				if (file.language == "2003lk") {
@@ -66,10 +67,14 @@ export default class CachedCompiler {
 			this.parsedFiles[id] = result.data;
 			this.fileErrors[id] = result.errors;
 			this.fileWarnings[id] = result.warnings;
+
 			this.parsedSources[id] = Object.assign({}, file);
 			shouldLink = true;
-			hasError = result.errors.length != 0;
+			if (result.errors.length != 0) {
+				hasError = true;
+			}
 		});
+
 		if (files.length != this.parsedSources.length) {
 			this.parsedSources.length = files.length;
 			this.parsedFiles.length = files.length;
@@ -78,14 +83,12 @@ export default class CachedCompiler {
 			shouldLink = true;
 		}
 
-		if (hasError) {
-			this.program = null;
-			return null;
-		}
 		if (shouldLink) {
 			try {
-				this.program = Program.link(this.parsedFiles as AsmModule[]);
-				this.linkErrors = [];
+				const files = hasError ? this.parsedFiles.filter(f => f != null) : this.parsedFiles;
+				const {program, errors} = linkModules(files as AsmModule[]);
+				this.program = program;
+				this.linkErrors = errors;
 				this.linkWarnings = [];
 			} catch (e) {
 				if (e instanceof ParseError) {
@@ -96,6 +99,12 @@ export default class CachedCompiler {
 					throw e;
 				}
 			}
+		}
+		if (this.linkErrors.length != 0) {
+			hasError = true;
+		}
+		if (hasError) {
+			this.program = null;
 		}
 	}
 }

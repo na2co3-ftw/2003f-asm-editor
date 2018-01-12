@@ -17,7 +17,7 @@ const RESERVED_KEYWORDS = [
 
 export function fullCompile(str: string, file: string = ""): CompileResult {
 	const {tokens, eof} = tokenize(str.replace(/\r\n?/g, "\n"), file);
-	const {root, errors, warnings} = new AsmParser(tokens, eof).parse();
+	const {root, errors, warnings} = new AsmParser(tokens, eof, file).parse();
 	return {data: root, errors, warnings};
 }
 
@@ -92,8 +92,16 @@ export function isValidLabel(name: string): boolean {
 }
 
 class AsmParser extends Parser<AsmModule> {
-	private builder = new AsmBuilder();
+	private builder: AsmBuilder;
 	private isCI = false;
+
+	private labelDefinitions = new Map<string, Token>();
+	private labelUses = new Map<string, Token[]>();
+
+	constructor(tokens: Token[], eof: Token, name: string) {
+		super(tokens, eof);
+		this.builder = new AsmBuilder(name);
+	}
 
 	protected parseRoot(): AsmModule {
 		this.builder.setHasMain(true);
@@ -102,6 +110,21 @@ class AsmParser extends Parser<AsmModule> {
 				this.parseInstruction();
 			});
 		}
+
+		for (const [label, tokens] of this.labelUses) {
+			const def = this.labelDefinitions.has(label);
+			if (!def) {
+				for (const token of tokens) {
+					this.errorWithoutThrow(`'${label}' is not defined`, token);
+				}
+			} else {
+				this.labelDefinitions.delete(label);
+			}
+		}
+		for (const [label, token] of this.labelDefinitions.entries()) {
+			this.warning(`'${label}' is defined but not used`, token);
+		}
+
 		try {
 			return this.builder.getAsmModule();
 		} catch (e) {
@@ -161,10 +184,14 @@ class AsmParser extends Parser<AsmModule> {
 			}
 			this.builder.inj(a, b, c);
 		} else if (token.text == "nll") {
-			this.builder.nll(this.parseLabel());
+			const label = this.parseLabel();
+			this.defineLabel(label);
+			this.builder.nll(label.text);
 		} else if (token.text == "l'") {
 			try {
-				this.builder.l(this.parseLabel());
+				const label = this.parseLabel();
+				this.defineLabel(label);
+				this.builder.l(label.text);
 			} catch (e) {
 				if (e instanceof BuilderError) {
 					throw new ParseError(e.message, token);
@@ -173,10 +200,14 @@ class AsmParser extends Parser<AsmModule> {
 				}
 			}
 		} else if (token.text == "kue") {
-			this.builder.kue(this.parseLabel());
+			const label = this.parseLabel();
+			this.useLabel(label);
+			this.builder.kue(label.text, label);
 			this.builder.setHasMain(false);
 		} else if (token.text == "xok") {
-			this.builder.xok(this.parseLabel());
+			const label = this.parseLabel();
+			this.defineLabel(label);
+			this.builder.xok(label.text, label);
 		} else {
 			throw new ParseError("Instruction expected", token);
 		}
@@ -213,6 +244,7 @@ class AsmParser extends Parser<AsmModule> {
 			return V.imm(parseInt(token.text));
 		}
 		if (isValidLabel(token.text)) {
+			this.useLabel(token);
 			return V.label(token.text);
 		}
 		throw new ParseError("Invalid operand", token);
@@ -230,7 +262,7 @@ class AsmParser extends Parser<AsmModule> {
 		throw new ParseError("Compare keyword expected", token);
 	}
 
-	private parseLabel(strict: boolean = false): string {
+	private parseLabel(strict: boolean = false): Token {
 		const token = this.take();
 		if (token == this.eof) {
 			throw new ParseError("Label name expected", token);
@@ -241,8 +273,26 @@ class AsmParser extends Parser<AsmModule> {
 					this.warning("Improper label name", token);
 				}
 			}
-			return token.text;
+			return token;
 		}
 		throw new ParseError("Invalid label name", token);
+	}
+
+	private defineLabel(token: Token) {
+		const definedLabel = this.labelDefinitions.get(token.text);
+		if (definedLabel) {
+			this.errorWithoutThrow(`'${token.text}' is already defined`, token);
+		} else {
+			this.labelDefinitions.set(token.text, token);
+		}
+	}
+
+	private useLabel(token: Token) {
+		let uses = this.labelUses.get(token.text);
+		if (uses) {
+			uses.push(token);
+		} else {
+			this.labelUses.set(token.text, [token]);
+		}
 	}
 }

@@ -21,7 +21,7 @@ export function fullCompile(str: string, file: string = ""): CompileResult {
 		return {data: null, errors, warnings};
 	}
 
-	const compiled = compile(root);
+	const compiled = compile(root, file);
 	return {
 		data: compiled.data,
 		errors: errors.concat(compiled.errors),
@@ -40,12 +40,14 @@ type LabelDefinition = "internal" | "builtin" | Definition.Xok | Definition.Cers
 
 type LabelUse = Statement.Fenxeo | Definition.Kue;
 
-function compile(parsed: {definitions: Definition[], hasMain: boolean}): CompileResult {
+function compile(parsed: {definitions: Definition[], hasMain: boolean}, name: string): CompileResult {
 	const {definitions, hasMain} = parsed;
-	let builder = new AsmBuilder();
+	let builder = new AsmBuilder(name);
 	let labelCount = new Map<string, number>();
-	let definedLabels = new Map<string, LabelDefinition>([["'3126834864", "builtin"]]);
-	let usedLabels = new Map<string, LabelUse[]>();
+
+	let labelDefinitions = new Map<string, LabelDefinition>([["'3126834864", "builtin"]]);
+	let labelUses = new Map<string, LabelUse[]>();
+
 	let errors: ParseError[] = [];
 	let warnings: ParseError[] = [];
 
@@ -57,10 +59,10 @@ function compile(parsed: {definitions: Definition[], hasMain: boolean}): Compile
 	for (const def of definitions) {
 		if (def instanceof Definition.Kue) {
 			useLabel(def);
-			builder.kue(def.name.text);
+			builder.kue(def.name.text, def.name.token);
 		} else if (def instanceof Definition.Xok) {
 			defineLabel(def);
-			builder.xok(def.name.text);
+			builder.xok(def.name.text, def.name.token);
 		} else if (def instanceof Definition.Cersva) {
 			let ff: FunctionFrameInfo = {
 				stackSize: 0,
@@ -107,8 +109,8 @@ function compile(parsed: {definitions: Definition[], hasMain: boolean}): Compile
 		}
 	}
 
-	for (const [label, uses] of usedLabels.entries()) {
-		const def = definedLabels.get(label);
+	for (const [label, uses] of labelUses.entries()) {
+		const def = labelDefinitions.get(label);
 		if (!def || def == "internal") {
 			for (const use of uses) {
 				if (def == "internal") {
@@ -125,10 +127,10 @@ function compile(parsed: {definitions: Definition[], hasMain: boolean}): Compile
 					}
 				}
 			}
-			definedLabels.delete(label);
+			labelDefinitions.delete(label);
 		}
 	}
-	for (const [label, def] of definedLabels.entries()) {
+	for (const [label, def] of labelDefinitions.entries()) {
 		if (label != "_fasal" && def instanceof Definition) {
 			warnings.push(new ParseError(`'${label}' is defined but not used`, def.name.token));
 		}
@@ -234,7 +236,7 @@ function compile(parsed: {definitions: Definition[], hasMain: boolean}): Compile
 			if (expr instanceof AnaxExpression) {
 				return convertAnaxExpr(expr, count);
 			}
-			throw new ParseError("unreachable");
+			throw new ParseError("unreachable", null);
 		}
 
 		function convertAnaxExpr(expr: AnaxExpression, argCount: number = 0): WritableValue {
@@ -273,17 +275,17 @@ function compile(parsed: {definitions: Definition[], hasMain: boolean}): Compile
 		labelCount.set(name, count);
 		const label = name + count;
 
-		const definedLabel = definedLabels.get(label);
+		const definedLabel = labelDefinitions.get(label);
 		if (definedLabel instanceof Token) {
 			errors.push(new ParseError(`'${label}' is defined internally`, definedLabel));
 		}
-		definedLabels.set(label, "internal");
+		labelDefinitions.set(label, "internal");
 		return label;
 	}
 
 	function defineLabel(def: Definition.Xok | Definition.Cersva) {
 		const label = def.name.text;
-		const definedLabel = definedLabels.get(label);
+		const definedLabel = labelDefinitions.get(label);
 		if (definedLabel) {
 			if (definedLabel == "internal") {
 				errors.push(new ParseError(`'${label}' is defined internally`, def.name.token));
@@ -291,17 +293,17 @@ function compile(parsed: {definitions: Definition[], hasMain: boolean}): Compile
 				errors.push(new ParseError(`'${label}' is already defined`, def.name.token));
 			}
 		} else {
-			definedLabels.set(label, def);
+			labelDefinitions.set(label, def);
 		}
 	}
 
 	function useLabel(use: LabelUse) {
 		const label = use.name.text;
-		let uses = usedLabels.get(label);
+		let uses = labelUses.get(label);
 		if (uses) {
 			uses.push(use);
 		} else {
-			usedLabels.set(label, [use]);
+			labelUses.set(label, [use]);
 		}
 	}
 }

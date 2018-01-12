@@ -1,13 +1,11 @@
-import {AsmModule, Compare, Instruction, LabeledInstruction, Register, Token, Value, WritableValue} from "./types";
+import {
+	AsmModule, Compare, Instruction, LabeledInstruction, LabelWithToken, Register, Token, Value,
+	WritableValue
+} from "./types";
 
 export class BuilderError {
 	constructor(public message: string) {}
 }
-
-export class InvalidArgumentError extends BuilderError {}
-export class MissingPrecedingInstError extends BuilderError {}
-export class MissingFollowingInstError extends BuilderError {}
-export class CrossingLabelError extends BuilderError {}
 
 const BINOP_INST: {[mnemonic: string]: {new(src: Value, dst: WritableValue): Instruction}} = {
 	"krz": Instruction.Krz,
@@ -34,21 +32,21 @@ export const BINARY_OPERATORS = Object.keys(BINOP_INST);
 
 export const TERNARY_OPERATORS = Object.keys(TRIOP_INST);
 
-
-
 export class AsmBuilder {
 	private instructions: LabeledInstruction[] = [];
-	private kueList: string[] = [];
-	private xokList: string[] = [];
+	private kueList: LabelWithToken[] = [];
+	private xokList: LabelWithToken[] = [];
 	private hasMain: boolean = false;
 	private nextLabels: string[] = [];
 	private nextToken: Token | null = null;
+	constructor(private name: string) {}
 
 	getAsmModule(): AsmModule {
 		if (this.nextLabels.length != 0) {
-			throw new MissingFollowingInstError("nll must be followed by an instruction");
+			throw new BuilderError("nll must be followed by an instruction");
 		}
 		return {
+			name: this.name,
 			instructions: this.instructions,
 			kueList: this.kueList,
 			xokList: this.xokList,
@@ -123,7 +121,7 @@ export class AsmBuilder {
 	binOp(mnemonic: string, src: Value, dst: WritableValue) {
 		const Inst = BINOP_INST[mnemonic];
 		if (!Inst) {
-			throw new InvalidArgumentError(`'${mnemonic}' is not a binary operator`);
+			throw new BuilderError(`'${mnemonic}' is not a binary operator`);
 		}
 		this.add(new Inst(src, dst));
 	}
@@ -131,17 +129,17 @@ export class AsmBuilder {
 	triOp(mnemonic: string, src: Value, dstl: WritableValue, dsth: WritableValue) {
 		const Inst = TRIOP_INST[mnemonic];
 		if (!Inst) {
-			throw new InvalidArgumentError(`'${mnemonic}' is not a ternary operator`);
+			throw new BuilderError(`'${mnemonic}' is not a ternary operator`);
 		}
 		this.add(new Inst(src, dstl, dsth));
 	}
 
 	l(label: string) {
 		if (this.instructions.length == 0) {
-			throw new MissingPrecedingInstError("l' must be preceded by an instruction");
+			throw new BuilderError("l' must be preceded by an instruction");
 		}
 		if (this.nextLabels.length != 0) {
-			throw new CrossingLabelError("nll must not be followed by l'");
+			throw new BuilderError("nll must not be followed by l'");
 		}
 		this.instructions[this.instructions.length - 1].labels.push(label);
 	}
@@ -150,12 +148,12 @@ export class AsmBuilder {
 		this.nextLabels.push(label);
 	}
 
-	kue(label: string) {
-		this.kueList.push(label);
+	kue(label: string, token: Token | null) {
+		this.kueList.push({name: label, token});
 	}
 
-	xok(label: string) {
-		this.xokList.push(label);
+	xok(label: string, token: Token | null) {
+		this.xokList.push({name: label, token});
 	}
 
 	setNextToken(token: Token) {

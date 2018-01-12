@@ -279,15 +279,18 @@ export type LabeledInstruction = {
 	token?: Token;
 }
 
+export type LabelWithToken = {name: string, token: Token | null};
+
 export interface AsmModule {
+	name: string;
 	instructions: LabeledInstruction[];
-	kueList: string[];
-	xokList: string[];
+	kueList: LabelWithToken[];
+	xokList: LabelWithToken[];
 	hasMain: boolean;
 }
 
 export class ParseError {
-	constructor(public message: string, public token: Token | null = null) {}
+	constructor(public message: string, public token: Token | null) {}
 }
 
 export type CompileResult = {data: AsmModule | null, errors: ParseError[], warnings: ParseError[]};
