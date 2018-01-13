@@ -13,6 +13,7 @@ interface HardwareStateProps{
 
 interface HardwareStateState {
 	hex: boolean;
+	byte: boolean;
 }
 
 export default class HardwareState extends React.Component<HardwareStateProps, HardwareStateState> {
@@ -20,14 +21,20 @@ export default class HardwareState extends React.Component<HardwareStateProps, H
 		super(props);
 
 		this.state = {
-			hex: true
+			hex: true,
+			byte: false,
 		};
 
 		this.hexChanged = this.hexChanged.bind(this);
+		this.unitChanged = this.unitChanged.bind(this);
 	}
 
 	private hexChanged(e: React.ChangeEvent<HTMLInputElement>) {
 		this.setState({hex: e.target.checked});
+	}
+
+	private unitChanged(e: React.ChangeEvent<HTMLInputElement>) {
+		this.setState({byte: e.target.value == "1"});
 	}
 
 	render() {
@@ -51,6 +58,7 @@ export default class HardwareState extends React.Component<HardwareStateProps, H
 					key={section}
 					section={section}
 					hex={this.state.hex}
+					byte={this.state.byte}
 					memory={machine.memory.data}
 					f5={machine.cpu.f5}
 					separator={notFirstLine && prevSection + 1 != section}
@@ -62,7 +70,7 @@ export default class HardwareState extends React.Component<HardwareStateProps, H
 
 		return (
 			<div>
-				<p>
+				<form>
 					<label>
 						<input type="checkbox"
 							   checked={this.state.hex}
@@ -70,7 +78,23 @@ export default class HardwareState extends React.Component<HardwareStateProps, H
 						/>
 						16進数で表示する
 					</label>
-				</p>
+					<label>
+						<input
+							type="radio" name="unit" value="1"
+							checked={this.state.byte}
+							onChange={this.unitChanged}
+						/>
+						8ビット
+					</label>
+					<label>
+						<input
+							type="radio" name="unit" value="4"
+							checked={!this.state.byte}
+							onChange={this.unitChanged}
+						/>
+						32ビット
+					</label>
+				</form>
 				<div className={!this.props.active ? "state-inactive": ""}>
 					<p className="monospace">
 						Registers:<br/>
@@ -109,35 +133,62 @@ interface MemorySectionProps{
 	section: number,
 	memory: {[address: number]: number}
 	hex: boolean,
+	byte: boolean,
 	f5: number,
 	separator: boolean
 }
 
 const MemorySection: React.SFC<MemorySectionProps> = (props) => {
+	const unit = props.byte ? 1 : 4;
 	let memoryHTML = "";
 	let inF5 = false;
 	let address = props.section << SECTION_SIZE;
 	memoryHTML += showInt32Pad(address, props.hex);
 	memoryHTML += ":";
-	for (let i = 0; i < SECTION_LENGTH; i++) {
+	for (let i = 0; i < SECTION_LENGTH; i += unit) {
 		memoryHTML += " ";
 		if (address == props.f5) {
 			memoryHTML += '<span class="out-memory-pointer f5">';
 			inF5 = true;
 		}
-		if (props.memory.hasOwnProperty(address)) {
-			memoryHTML += showInt8Pad(props.memory[address], props.hex);
+
+		if (props.byte) {
+			if (props.memory.hasOwnProperty(address)) {
+				memoryHTML += showInt8Pad(props.memory[address], props.hex);
+			} else {
+				memoryHTML += props.hex ? "--" : "---";
+			}
 		} else {
-			memoryHTML += props.hex ? "--" : "---";
+			let complete = true;
+			let patial = false;
+			for (let i = 0; i < 4; i++) {
+				if (props.memory.hasOwnProperty(address + i)) {
+					patial = true;
+				} else {
+					complete = false;
+				}
+			}
+			if (complete) {
+				const a = props.memory[address];
+				const b = props.memory[address + 1];
+				const c = props.memory[address + 2];
+				const d = props.memory[address + 3];
+				memoryHTML += showInt32Pad(compose(a, b, c, d), props.hex);
+			} else if (patial) {
+				memoryHTML += props.hex ? "********" : "**********";
+			} else {
+				memoryHTML += props.hex ? "--------" : "----------";
+			}
 		}
+
 		if (inF5) {
-			if (address == ((props.f5 + 3) | 0)) {
+			if (address == ((props.f5 + 4 - unit) | 0)) {
 				memoryHTML += '</span>';
 				inF5 = false;
 			}
 		}
 
-		address = (address + 1)|0;
+		address = (address + unit)|0;
 	}
 	if (inF5) {
 		memoryHTML += '</span>';
@@ -171,4 +222,8 @@ function showInt8Pad(number: number, hex: boolean = false): string {
 		str = "0" + str;
 	}
 	return str;
+}
+
+function compose(a: number, b: number, c: number, d: number): number {
+	return (a << 24) + (b << 16) + (c << 8) + d;
 }
