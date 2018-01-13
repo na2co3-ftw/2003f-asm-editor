@@ -4,7 +4,7 @@ import {fullCompile as compileAsm} from "../2003f/2003lk/parser";
 import {fullCompile as compileTinka} from "../2003f/tinka/compiler";
 import {fullCompile as compileCent} from "../2003f/cent/compiler";
 import {linkModules, Program} from "../2003f/linker";
-import {AsmModule, CompileResult, ParseError} from "../2003f/types";
+import {AsmModule, CompileResult, ParseError, Token} from "../2003f/types";
 
 export {Program};
 
@@ -18,14 +18,21 @@ export interface SourceFile {
 
 export const LANGUAGES: Language[] = ["2003lk", "tinka", "cent"];
 
-export default class CachedCompiler {
-	private parsedSources: SourceFile[];
-	private parsedFiles: (AsmModule | null)[];
-	program: Program | null;
+export interface ErrorsAndWarnings {
 	fileErrors: ParseError[][];
 	fileWarnings: ParseError[][];
 	linkErrors: ParseError[];
 	linkWarnings: ParseError[];
+}
+
+export default class CachedCompiler {
+	private parsedSources: SourceFile[];
+	private parsedFiles: (AsmModule | null)[];
+	program: Program | null;
+	private fileErrors: ParseError[][];
+	private fileWarnings: ParseError[][];
+	private linkErrors: ParseError[];
+	private linkWarnings: ParseError[];
 
 	constructor() {
 		this.clear();
@@ -107,5 +114,56 @@ export default class CachedCompiler {
 		if (hasError) {
 			this.program = null;
 		}
+	}
+
+	getErrorsAndWarnings(): ErrorsAndWarnings {
+		let errorTokens = new Set<Token>();
+		let fileErrors = this.fileErrors.map(errors => {
+			for (const error of errors) {
+				if (error.token) {
+					errorTokens.add(error.token);
+				}
+			}
+			return errors.slice(0);
+		});
+
+		let linkErrors: ParseError[] = [];
+		this.linkErrors.forEach(error => {
+			if (error.token) {
+				errorTokens.add(error.token);
+				for (let i = 0; i < this.parsedSources.length; i++) {
+					if (this.parsedSources[i].name == error.token.file) {
+						fileErrors[i].push(error);
+						return;
+					}
+				}
+			}
+			linkErrors.push(error);
+		});
+
+
+		let fileWarnings = this.fileWarnings.map(warnings => {
+			return warnings.filter(warning => !errorTokens.has(warning.token!));
+		});
+
+		let linkWarnings: ParseError[] = [];
+		this.linkWarnings.forEach(warning => {
+			if (warning.token) {
+				if (errorTokens.has(warning.token)) {
+					return;
+				}
+				for (let i = 0; i < this.parsedSources.length; i++) {
+					if (this.parsedSources[i].name == warning.token.file) {
+						fileWarnings[i].push(warning);
+						return;
+					}
+				}
+			}
+			linkWarnings.push(warning);
+		});
+
+		return {
+			fileErrors, fileWarnings, linkErrors, linkWarnings
+		};
 	}
 }

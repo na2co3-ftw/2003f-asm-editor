@@ -17,7 +17,7 @@ import CodeMirrorComponent, {MarkerInfo} from "./codemirror-component";
 import EditorTab from "./editor-tab";
 import EditorStatusBar from "./editor-status-bar";
 
-import {ParseError, Token} from "../2003f/types";
+import {ParseError} from "../2003f/types";
 
 const DEFAULT_ASM_NAME = "fib_non_recursive";
 const DEFAULT_ASM = `'c'i    
@@ -283,56 +283,7 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 
 	private parse() {
 		this.parser.compile(this.state.sources);
-
-		let errorTokens = new Set<Token>();
-		let fileErrors = this.parser.fileErrors.map(errors => {
-			for (const error of errors) {
-				if (error.token) {
-					errorTokens.add(error.token);
-				}
-			}
-			return errors.slice(0);
-		});
-		let linkErrors: ParseError[] = [];
-		this.parser.linkErrors.forEach(error => {
-			if (error.token) {
-				errorTokens.add(error.token);
-				for (let i = 0; i < this.state.sources.length; i++) {
-					if (this.state.sources[i].name == error.token.file) {
-						fileErrors[i].push(error);
-						return;
-					}
-				}
-			}
-			linkErrors.push(error);
-		});
-
-
-		let fileWarnings = this.parser.fileWarnings.map(warnings => {
-			return warnings.filter(warning => !errorTokens.has(warning.token!));
-		});
-		let linkWarnings: ParseError[] = [];
-		this.parser.linkWarnings.forEach(warning => {
-			if (warning.token) {
-				if (errorTokens.has(warning.token)) {
-					return;
-				}
-				for (let i = 0; i < this.state.sources.length; i++) {
-					if (this.state.sources[i].name == warning.token.file) {
-						fileWarnings[i].push(warning);
-						return;
-					}
-				}
-			}
-			linkWarnings.push(warning);
-		});
-
-		this.setState({
-			fileErrors: fileErrors,
-			fileWarnings: fileWarnings,
-			linkErrors: linkErrors,
-			linkWarnings: linkWarnings
-		});
+		this.setState(this.parser.getErrorsAndWarnings());
 	}
 
 	showFile(name: string) {
