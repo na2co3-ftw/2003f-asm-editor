@@ -58,9 +58,10 @@ export abstract class Parser<T> {
 		return null;
 	}
 
-	protected lookaheadString(text: string): boolean {
-		if (this.index < this.tokens.length) {
-			if (this.tokens[this.index].text == text) {
+	protected lookaheadString(text: string, pos: number = 1): boolean {
+		const index = this.index + pos - 1;
+		if (index < this.tokens.length) {
+			if (this.tokens[index].text == text) {
 				return true;
 			}
 		}

@@ -1,5 +1,6 @@
 import {COMPARES, ParseError, Token} from "../types";
 import {Parser} from "../parser";
+import {isValidLabel} from "../2003lk/parser";
 
 export const BI_OPERATORS = [
 	"ata", "nta",
@@ -54,6 +55,11 @@ export namespace Operation {
 export interface Subroutine {
 	name: Token;
 	operations: Operation[];
+}
+
+export interface ExternalFunction {
+	name: Token;
+	argNum: number;
 }
 
 export function tokenize(source: string, file: string = ""): {tokens: Token[], eof: Token, errors: ParseError[]} {
@@ -127,20 +133,32 @@ function isWhiteSpace(char: string): boolean {
 	return /\s/.test(char);
 }
 
-export class CentParser extends Parser<{operations: Operation[], subroutines: Subroutine[]}> {
+export interface CentParsed {
+	operations: Operation[],
+	subroutines: Subroutine[],
+	functions: ExternalFunction[]
+}
+
+export class CentParser extends Parser<CentParsed> {
 	private subroutines: Subroutine[] = [];
-	protected parseRoot(): {operations: Operation[]; subroutines: Subroutine[]} {
+	private functions: ExternalFunction[] = [];
+
+	protected parseRoot(): CentParsed {
 		let operations: Operation[] = [];
 		while (this.isNotEOF()) {
 			this.try(() => {
 				if (this.lookaheadString("<")) {
-					this.subroutines.push(this.parseSubroutine());
+					this.parseSubroutineOrFunction();
 				} else {
 					operations.push(this.parseOperation(false));
 				}
 			});
 		}
-		return {operations, subroutines: this.subroutines};
+		return {
+			operations,
+			subroutines: this.subroutines,
+			functions: this.functions
+		};
 	}
 
 	private parseSubroutine(): Subroutine {
@@ -151,7 +169,7 @@ export class CentParser extends Parser<{operations: Operation[], subroutines: Su
 		if (nameToken == this.eof || nameToken.text == ">") {
 			throw new ParseError("Subroutine name expected", nameToken);
 		}
-		if (/^\d*$/.test(nameToken.text) ||
+		if (/^\d/.test(nameToken.text) ||
 			KEYWORDS.indexOf(nameToken.text) >= 0) {
 			this.errorWithoutThrow("Invalid subroutine name", nameToken);
 		}
@@ -174,14 +192,50 @@ export class CentParser extends Parser<{operations: Operation[], subroutines: Su
 		throw new ParseError("'>' expected", this.eof);
 	}
 
-	private parseIfSubroutineInBlock(block: string): boolean {
-		if (this.lookaheadString("<")) {
-			const subroutine = this.parseSubroutine();
-			this.subroutines.push(subroutine);
-			this.warning(`Subroutine should not defined in '${block}'`, subroutine.name);
-			return true;
+	private parseFunction(): ExternalFunction {
+		this.takeString("<");
+		this.takeString("xok");
+
+		const nameToken = this.take();
+		if (nameToken == this.eof || nameToken.text == ">") {
+			throw new ParseError("Function name expected", nameToken);
 		}
-		return false;
+		if (/^\d/.test(nameToken.text) ||
+			!isValidLabel(nameToken.text) ||
+			KEYWORDS.indexOf(nameToken.text) >= 0) {
+			this.errorWithoutThrow("Invalid function name", nameToken);
+		}
+		if (RESERVED_KEYWORDS.indexOf(nameToken.text) >= 0) {
+			this.warning("Improper function name", nameToken);
+		}
+
+		const argNumToken = this.take();
+		if (argNumToken == this.eof || nameToken.text == ">") {
+			throw new ParseError("Number of arguments expected", argNumToken);
+		}
+		if (!/^\d+$/.test(argNumToken.text)) {
+			this.errorWithoutThrow("Invalid number of arguments", argNumToken);
+		}
+
+		this.takeString(">");
+
+		return {name: nameToken, argNum: parseInt(argNumToken.text)};
+	}
+
+	private parseSubroutineOrFunction(block: string | null = null) {
+		if (this.lookaheadString("xok", 2)) {
+			const func = this.parseFunction();
+			this.functions.push(func);
+			if (block) {
+				this.warning(`Function should not defined in '${block}'`, func.name);
+			}
+		} else {
+			const sub = this.parseSubroutine();
+			this.subroutines.push(sub);
+			if (block) {
+				this.warning(`Subroutine should not defined in '${block}'`, sub.name);
+			}
+		}
 	}
 
 	private parseOperation(inSubroutine: boolean): Operation {
@@ -204,7 +258,9 @@ export class CentParser extends Parser<{operations: Operation[], subroutines: Su
 					return new Operation.Fi(token, mal, null);
 				}
 				this.try(() => {
-					if (!inSubroutine && !this.parseIfSubroutineInBlock("fi")) {
+					if (!inSubroutine && this.lookaheadString("<")) {
+						this.parseSubroutineOrFunction("fi");
+					} else {
 						mal.push(this.parseOperation(inSubroutine));
 					}
 				});
@@ -223,7 +279,9 @@ export class CentParser extends Parser<{operations: Operation[], subroutines: Su
 						return new Operation.Fi(token, mal, ol);
 					}
 					this.try(() => {
-						if (!inSubroutine && !this.parseIfSubroutineInBlock("fi")) {
+						if (!inSubroutine && this.lookaheadString("<")) {
+							this.parseSubroutineOrFunction("fi");
+						} else {
 							ol.push(this.parseOperation(inSubroutine));
 						}
 					});
@@ -241,7 +299,9 @@ export class CentParser extends Parser<{operations: Operation[], subroutines: Su
 					return new Operation.Cecio(token, body);
 				}
 				this.try(() => {
-					if (!inSubroutine && !this.parseIfSubroutineInBlock("cecio")) {
+					if (!inSubroutine && this.lookaheadString("<")) {
+						this.parseSubroutineOrFunction("cecio");
+					} else {
 						body.push(this.parseOperation(inSubroutine));
 					}
 				});
@@ -258,7 +318,9 @@ export class CentParser extends Parser<{operations: Operation[], subroutines: Su
 					return new Operation.Fal(token, body);
 				}
 				this.try(() => {
-					if (!inSubroutine && !this.parseIfSubroutineInBlock("fal")) {
+					if (!inSubroutine && this.lookaheadString("<")) {
+						this.parseSubroutineOrFunction("fal");
+					} else {
 						body.push(this.parseOperation(inSubroutine));
 					}
 				});

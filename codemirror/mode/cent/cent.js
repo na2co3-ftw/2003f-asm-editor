@@ -13,7 +13,8 @@ const OPERATORS = [
 const KEYWORDS = [
 	"fal", "laf",
 	"fi", "ol", "if",
-	"cecio", "oicec"
+	"cecio", "oicec",
+	"xok"
 ];
 
 CodeMirror.defineSimpleMode("cent", {

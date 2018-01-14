@@ -1,6 +1,9 @@
 import {AsmModule, CompileResult, isCompare, ParseError} from "../types";
 import {AsmBuilder, V} from "../builder";
-import {BI_OPERATORS, CentParser, Operation, Subroutine, tokenize, TRI_OPERATORS} from "./parser";
+import {
+	BI_OPERATORS, CentParsed, CentParser, ExternalFunction, Operation, Subroutine, tokenize,
+	TRI_OPERATORS
+} from "./parser";
 
 export function fullCompile(str: string, file: string = ""): CompileResult {
 	const tokenized = tokenize(str.replace(/\r\n?/g, "\n"), file);
@@ -13,7 +16,7 @@ export function fullCompile(str: string, file: string = ""): CompileResult {
 		};
 	}
 
-	const compiled = new CentCompiler(parsed.root.operations, parsed.root.subroutines, file).compile();
+	const compiled = new CentCompiler(parsed.root, file).compile();
 	return {
 		data: compiled.data,
 		errors: tokenized.errors.concat(parsed.errors, compiled.errors),
@@ -34,19 +37,36 @@ class CentCompiler {
 	private recursiveSubroutines = new Set<Subroutine>();
 	private usedSubroutines = new Set<Subroutine>();
 
+	private functionMap = new Map<string, ExternalFunction>();
+	private usedFunctions = new Set<ExternalFunction>();
+
 	private errors: ParseError[] = [];
 	private warnings: ParseError[] = [];
 
-	constructor(private operations: Operation[], private subroutines: Subroutine[], name: string) {
+	constructor(private parsed: CentParsed, name: string) {
 		this.builder = new AsmBuilder(name);
 	}
 
 	compile(): {data: AsmModule, errors: ParseError[], warnings: ParseError[]} {
-		for (const sub of this.subroutines) {
+		for (const sub of this.parsed.subroutines) {
 			if (this.subroutineMap.has(sub.name.text)) {
 				this.errors.push(new ParseError(`'${sub.name.text}' is already defined`, sub.name));
 			} else {
 				this.subroutineMap.set(sub.name.text, sub);
+			}
+		}
+
+		for (const func of this.parsed.functions) {
+			if (this.functionMap.has(func.name.text)) {
+				this.errors.push(new ParseError(`'${func.name.text}' is already defined`, func.name));
+				continue;
+			}
+
+			this.builder.xok(func.name.text, func.name);
+			if (this.subroutineMap.has(func.name.text)) {
+				this.warnings.push(new ParseError(`Subroutine '${func.name.text}' hides function '${func.name.text}'`, func.name));
+			} else {
+				this.functionMap.set(func.name.text, func);
 			}
 		}
 
@@ -55,16 +75,21 @@ class CentCompiler {
 		this.builder.krz(V.f1, V.f5io);
 		this.builder.krz(V.f5, V.f1);
 
-		for (const operation of this.operations) {
+		for (const operation of this.parsed.operations) {
 			this.compileOperation(operation);
 		}
 
 		for (const sub of this.recursiveSubroutines) {
 			this.errors.push(new ParseError("Recursive subroutine", sub.name));
 		}
-		for (const sub of this.subroutines) {
+		for (const sub of this.subroutineMap.values()) {
 			if (!this.usedSubroutines.has(sub)) {
 				this.warnings.push(new ParseError(`'${sub.name.text}' is defined but not used`, sub.name));
+			}
+		}
+		for (const func of this.functionMap.values()) {
+			if (!this.usedFunctions.has(func)) {
+				this.warnings.push(new ParseError(`'${func.name.text}' is defined but not used`, func.name));
 			}
 		}
 
@@ -185,12 +210,8 @@ class CentCompiler {
 			builder.dtosna(V.imm(2), V.f0);
 			builder.nta(V.imm(4), V.f5);
 			builder.krz(V.f0, V.f5io);
-		} else {
-			const sub = this.subroutineMap.get(text);
-			if (sub == null) {
-				this.errors.push(new ParseError("Invalid operation", operation.token));
-				return;
-			}
+		} else if (this.subroutineMap.has(text)) {
+			const sub = this.subroutineMap.get(text)!;
 			const i = this.subroutineCallStack.indexOf(sub);
 			if (i >= 0) {
 				for (const s of this.subroutineCallStack.slice(i)) {
@@ -206,6 +227,19 @@ class CentCompiler {
 				this.compileOperation(op);
 			}
 			this.subroutineCallStack.pop();
+		} else if (this.functionMap.has(text)) {
+			const func = this.functionMap.get(text)!;
+			this.usedFunctions.add(func);
+
+			builder.nta(V.imm(4), V.f5);
+			builder.inj(V.label(text), V.xx, V.f5io);
+			if (func.argNum != 0) {
+				builder.ata(V.imm(func.argNum * 4), V.f5);
+			}
+			builder.krz(V.f0, V.f5io);
+		} else {
+			this.errors.push(new ParseError("Invalid operation", operation.token));
+			return;
 		}
 	}
 }
