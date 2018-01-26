@@ -94,6 +94,7 @@ export function isValidLabel(name: string): boolean {
 class AsmParser extends Parser<AsmModule> {
 	private builder: AsmBuilder;
 	private isCI = false;
+	private afterFi = false;
 
 	private labelDefinitions = new Map<string, Token>();
 	private labelUses = new Map<string, Token[]>();
@@ -141,13 +142,20 @@ class AsmParser extends Parser<AsmModule> {
 		this.builder.setNextToken(token);
 		if (token.text == "'c'i") {
 			this.isCI = true;
+			return;
 		} else if (token.text == "'i'c") {
 			this.isCI = false;
+			return;
 		} else if (token.text == "fen") {
 			this.builder.fen();
 		} else if (token.text == "nac") {
 			this.builder.nac(this.parseWritableOperand());
 		} else if (AsmBuilder.isBinOp(token.text)) {
+			if (token.text == "malkrz" || token.text == "malkRz") {
+				if (!this.afterFi) {
+					this.warning("'malkrz' should follow 'fi'", token);
+				}
+			}
 			let src, dst;
 			if (this.isCI) {
 				dst = this.parseWritableOperand();
@@ -187,6 +195,7 @@ class AsmParser extends Parser<AsmModule> {
 			const label = this.parseLabel();
 			this.defineLabel(label);
 			this.builder.nll(label.text);
+			return;
 		} else if (token.text == "l'") {
 			try {
 				const label = this.parseLabel();
@@ -199,6 +208,7 @@ class AsmParser extends Parser<AsmModule> {
 					throw e;
 				}
 			}
+			return;
 		} else if (token.text == "kue") {
 			const label = this.parseLabel();
 			this.useLabel(label);
@@ -211,6 +221,8 @@ class AsmParser extends Parser<AsmModule> {
 		} else {
 			throw new ParseError("Instruction expected", token);
 		}
+
+		this.afterFi = token.text == "fi";
 	}
 
 	private parseOperand(writable: boolean = false): Value {
