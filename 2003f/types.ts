@@ -151,7 +151,13 @@ export namespace Instruction {
 	}
 
 	export class Dtosna extends BinaryInstruction {
-		protected compute(a: number, b: number): number { return (b & 0xffffffe0) == 0 ? a >> b : 0; }
+		protected compute(a: number, b: number): number {
+			if ((b & 0xffffffe0) == 0) {
+				return a >> b;
+			} else {
+				return (a & 0x80000000) == 0 ? 0 : -1;
+			}
+		}
 	}
 
 	export class Nac implements Instruction {
