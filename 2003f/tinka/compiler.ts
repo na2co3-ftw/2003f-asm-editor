@@ -75,7 +75,7 @@ function compile(parsed: {definitions: Definition[], hasMain: boolean}, name: st
 			}
 			for (const arg of def.args) {
 				if (ff.variables.has(arg.text)) {
-					warnings.push(new ParseError(`'${arg}' is already defined`, arg.token));
+					warnings.push(new ParseError(`'${arg.text}' is already defined`, arg.token));
 				}
 				ff.variables.set(arg.text, {
 					offset: ff.stackSize,
@@ -123,7 +123,7 @@ function compile(parsed: {definitions: Definition[], hasMain: boolean}, name: st
 			if (def instanceof Definition.Cersva) {
 				for (const use of uses) {
 					if (use instanceof Statement.Fenxeo && def.args.length != use.args.length) {
-						warnings.push(new ParseError(`'${def.name}' takes ${def.args.length} argument(s) but given ${use.args.length}`, use.token));
+						warnings.push(new ParseError(`'${def.name.text}' takes ${def.args.length} argument(s) but given ${use.args.length}`, use.token));
 					}
 				}
 			}
@@ -177,7 +177,7 @@ function compile(parsed: {definitions: Definition[], hasMain: boolean}, name: st
 					warnings.push(new ParseError("'anax' should be at the beginning of function", stmt.token));
 				}
 				if (ff.variables.has(stmt.name.text)) {
-					warnings.push(new ParseError(`'${stmt.name}' is already defined`, stmt.name.token));
+					warnings.push(new ParseError(`'${stmt.name.text}' is already defined`, stmt.name.token));
 				}
 				ff.stackSize += stmt.length;
 				builder.nta(V.imm(stmt.length * 4), V.f5);
