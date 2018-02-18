@@ -36,7 +36,7 @@ interface FunctionFrameInfo {
 	dosnudLabel: string
 }
 
-type LabelDefinition = "internal" | "builtin" | Definition.Xok | Definition.Cersva;
+type LabelDefinition = "internal" | Definition.Xok | Definition.Cersva;
 
 type LabelUse = Statement.Fenxeo | Definition.Kue;
 
@@ -45,7 +45,7 @@ function compile(parsed: {definitions: Definition[], hasMain: boolean}, name: st
 	let builder = new AsmBuilder(name);
 	let labelCount = new Map<string, number>();
 
-	let labelDefinitions = new Map<string, LabelDefinition>([["'3126834864", "builtin"]]);
+	let labelDefinitions = new Map<string, LabelDefinition>();
 	let labelUses = new Map<string, LabelUse[]>();
 
 	let errors: ParseError[] = [];
@@ -187,13 +187,7 @@ function compile(parsed: {definitions: Definition[], hasMain: boolean}, name: st
 					token: stmt.name.token
 				});
 			} else if (stmt instanceof Statement.Fenxeo) {
-				let name: Value;
-				if (stmt.name.text == "'3126834864") {
-					name = V.imm(3126834864);
-				} else {
-					name = V.label(stmt.name.text);
-					useLabel(stmt);
-				}
+				useLabel(stmt);
 
 				stmt.args.forEach((arg, i) => {
 					const argValue = convertExpr(arg, i + 1);
@@ -202,7 +196,7 @@ function compile(parsed: {definitions: Definition[], hasMain: boolean}, name: st
 				});
 
 				builder.nta(V.imm(4), V.f5);
-				builder.inj(name, V.xx, V.f5io);
+				builder.inj(V.label(stmt.name.text), V.xx, V.f5io);
 				builder.ata(V.imm((stmt.args.length + 1) * 4), V.f5);
 
 				if (stmt.destination != null) {
@@ -276,8 +270,8 @@ function compile(parsed: {definitions: Definition[], hasMain: boolean}, name: st
 		const label = name + count;
 
 		const definedLabel = labelDefinitions.get(label);
-		if (definedLabel instanceof Token) {
-			errors.push(new ParseError(`'${label}' is defined internally`, definedLabel));
+		if (definedLabel instanceof Definition) {
+			errors.push(new ParseError(`'${label}' is defined internally`, definedLabel.name.token));
 		}
 		labelDefinitions.set(label, "internal");
 		return label;

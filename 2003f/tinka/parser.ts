@@ -160,9 +160,13 @@ const BI_OPERATORS = [
 
 const TRI_OPERATORS = ["lat", "latsna"];
 
-const RESERVED_KEYWORDS = [
-	"kue", "xok", "anax", "fi", "fal", "cersva", "dosnud", "fenxeo", "el",
-	"nac", ...BI_OPERATORS, "kak", ...TRI_OPERATORS, ...COMPARES
+const KEYWORDS = [
+	"nac", ...BI_OPERATORS, "kak", ...TRI_OPERATORS, ...COMPARES,
+	"anax", "cersva", "dosnud", "fenxeo", "rinyv", "situv", "fal", "el"
+];
+
+const WARNING_KEYWORDS = [
+	"kue", "xok", "fi"
 ];
 
 const RESERVED_LABEL_REGEXP = /^(fi|fal(-rinyv)?|dosnud)\d+$/;
@@ -224,10 +228,20 @@ function isWhiteSpace(char: string): boolean {
 	return /\s/.test(char);
 }
 
+function isValidVariable(text: string): boolean {
+	return text != "" && KEYWORDS.indexOf(text) < 0;
+}
+
 function isImproperVariable(text: string): boolean {
-	return /^\d*$/.test(text) ||
-		RESERVED_KEYWORDS.indexOf(text) >= 0 ||
+	return /^\d$/.test(text) ||
+		WARNING_KEYWORDS.indexOf(text) >= 0 ||
 		/[^\sFRVXa-z0-9'_-]/.test(text);
+}
+
+function isImproperCersva(text: string) {
+	return KEYWORDS.indexOf(text) >= 0 ||
+		WARNING_KEYWORDS.indexOf(text) >= 0 ||
+		RESERVED_LABEL_REGEXP.test(text);
 }
 
 export class TinkaParser extends Parser<{definitions: Definition[], hasMain: boolean}> {
@@ -264,15 +278,11 @@ export class TinkaParser extends Parser<{definitions: Definition[], hasMain: boo
 				}
 				const argToken = this.take();
 				let arg = argToken.text;
-				let pointer = false;
 				if (arg.includes("@")) {
-					arg = arg.slice(0, -1);
-					pointer = true;
+					this.errorWithoutThrow("Invalid variable name", argToken);
 				}
-				if (isImproperVariable(arg)) {
+				if (!isValidVariable(arg) || isImproperVariable(arg)) {
 					this.warning("Improper variable name", argToken);
-				} else if (pointer) {
-					this.warning("Redundant '@'", argToken);
 				}
 				args.push({text: arg, token: argToken});
 			}
@@ -312,6 +322,9 @@ export class TinkaParser extends Parser<{definitions: Definition[], hasMain: boo
 				const split = nameToken.text.split("@");
 				const [name, size] = split;
 
+				if (!isValidVariable(name)) {
+					throw new ParseError("Invalid variable name", nameToken);
+				}
 				if (isImproperVariable(name)) {
 					this.warning("Improper variable name", nameToken);
 				}
@@ -334,6 +347,9 @@ export class TinkaParser extends Parser<{definitions: Definition[], hasMain: boo
 					parseInt(size)
 				);
 			} else {
+				if (!isValidVariable(nameToken.text)) {
+					throw new ParseError("Invalid variable name", nameToken);
+				}
 				if (isImproperVariable(nameToken.text)) {
 					this.warning("Improper variable name", nameToken);
 				}
@@ -397,10 +413,7 @@ export class TinkaParser extends Parser<{definitions: Definition[], hasMain: boo
 		const token = this.take();
 		if (token != this.eof && isValidLabel(token.text)) {
 			if (strict) {
-				if (/^\d/.test(token.text) ||
-					RESERVED_KEYWORDS.indexOf(token.text) >= 0 ||
-					RESERVED_LABEL_REGEXP.test(token.text)
-				) {
+				if (/^\d/.test(token.text) || isImproperCersva(token.text)) {
 					this.warning("Improper label name", token);
 				}
 			}
@@ -412,12 +425,8 @@ export class TinkaParser extends Parser<{definitions: Definition[], hasMain: boo
 	private parseCersvaName(strict: boolean = false): Name {
 		const token = this.take();
 		if (token != this.eof && isValidLabel(token.text) && !/^\d/.test(token.text)) {
-			if (strict) {
-				if (RESERVED_KEYWORDS.indexOf(token.text) >= 0 ||
-					RESERVED_LABEL_REGEXP.test(token.text)
-				) {
-					this.warning("Improper cersva name", token);
-				}
+			if (strict && isImproperCersva(token.text)) {
+				this.warning("Improper cersva name", token);
 			}
 			return {text: token.text, token};
 		}
@@ -431,18 +440,20 @@ export class TinkaParser extends Parser<{definitions: Definition[], hasMain: boo
 		}
 
 		const split = token.text.split("@");
-		if (split[split.length - 1] == "") {
-			throw new ParseError("Invalid operand", token);
-		}
 		const lastValueStr = split[split.length - 1];
 		let lastValue;
-		if (/^\d+$/.test(lastValueStr)) {
+		if (lastValueStr == "") {
+			throw new ParseError("Invalid operand", token);
+		} else if (/^\d+$/.test(lastValueStr)) {
 			lastValue = new Expression.Constant(token, parseInt(lastValueStr));
 		} else {
 			lastValue = new AnaxExpression(token, lastValueStr);
 		}
 
 		return split.slice(0, -1).reduceRight((pos, value) => {
+			if (value == "") {
+				throw new ParseError("Invalid operand", token);
+			}
 			return new AnaxExpression(token, value, pos);
 		}, lastValue);
 	}
