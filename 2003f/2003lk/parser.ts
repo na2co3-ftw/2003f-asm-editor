@@ -94,6 +94,7 @@ export function isValidLabel(name: string): boolean {
 class AsmParser extends Parser<AsmModule> {
 	private builder: AsmBuilder;
 	private isCI = false;
+	private explicitSpecifiedOrder = false;
 	private afterFi = false;
 
 	private labelDefinitions = new Map<string, Token>();
@@ -142,9 +143,11 @@ class AsmParser extends Parser<AsmModule> {
 		this.builder.setNextToken(token);
 		if (token.text == "'c'i") {
 			this.isCI = true;
+			this.explicitSpecifiedOrder = true;
 			return;
 		} else if (token.text == "'i'c") {
 			this.isCI = false;
+			this.explicitSpecifiedOrder = true;
 			return;
 		} else if (token.text == "fen") {
 			this.builder.fen();
@@ -214,14 +217,20 @@ class AsmParser extends Parser<AsmModule> {
 			this.useLabel(label);
 			this.builder.kue(label.text, label);
 			this.builder.setHasMain(false);
+			return;
 		} else if (token.text == "xok") {
 			const label = this.parseLabel();
 			this.defineLabel(label);
 			this.builder.xok(label.text, label);
+			return;
 		} else {
 			throw new ParseError("Instruction expected", token);
 		}
 
+		if (!this.explicitSpecifiedOrder) {
+			this.warning("Operand oder should specified before any instruction", token);
+			this.explicitSpecifiedOrder = true; // Show this warning only once
+		}
 		this.afterFi = token.text == "fi";
 	}
 
