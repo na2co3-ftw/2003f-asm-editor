@@ -83,7 +83,7 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 	private lintOptions: CodeMirror.LintOptions;
 	private openFileInput: HTMLInputElement;
 	private parser: CachedCompiler;
-	private chageTimeout: number | null = null;
+	private changeTimeout: number | null = null;
 
 	constructor(props: EditorProps) {
 		super(props);
@@ -139,10 +139,10 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 		}
 
 		if (this.state.sources != prevState.sources) {
-			if (this.chageTimeout != null) {
-				clearTimeout(this.chageTimeout);
+			if (this.changeTimeout != null) {
+				clearTimeout(this.changeTimeout);
 			}
-			this.chageTimeout = setTimeout(this.parse, 500);
+			this.changeTimeout = setTimeout(this.parse, 500);
 		}
 	}
 
