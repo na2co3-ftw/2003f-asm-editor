@@ -12,12 +12,9 @@ export const TRI_OPERATORS = ["lat", "latsna"];
 
 const KEYWORDS = [
 	"nac", ...BI_OPERATORS, ...TRI_OPERATORS, ...COMPARES,
+	"krzq", "kRzq", "achq", "roftq",
 	"krz", "kRz", "ach", "roft", "ycax", "pielyn", "kinfit",
 	"fal", "laf", "fi", "ol", "if", "cecio", "oicec", "<", ">"
-];
-
-const RESERVED_KEYWORDS = [
-	"krzq", "kRzq", "achq", "roftq"
 ];
 
 export abstract class Operation {
@@ -173,8 +170,7 @@ export class CentParser extends Parser<CentParsed> {
 			KEYWORDS.indexOf(nameToken.text) >= 0) {
 			this.errorWithoutThrow("Invalid subroutine name", nameToken);
 		}
-		if (RESERVED_KEYWORDS.indexOf(nameToken.text) >= 0 ||
-			/[^\sFRVXa-z0-9,.?!':+|=$\\@&#"()《》_-]/.test(nameToken.text)) {
+		if (/[^\sFRVXa-z0-9,.?!':+|=$\\@&#"()《》_-]/.test(nameToken.text)) {
 			this.warning("Improper subroutine name", nameToken);
 		}
 
@@ -204,9 +200,6 @@ export class CentParser extends Parser<CentParsed> {
 			!isValidLabel(nameToken.text) ||
 			KEYWORDS.indexOf(nameToken.text) >= 0) {
 			this.errorWithoutThrow("Invalid function name", nameToken);
-		}
-		if (RESERVED_KEYWORDS.indexOf(nameToken.text) >= 0) {
-			this.warning("Improper function name", nameToken);
 		}
 
 		const argNumToken = this.take();
