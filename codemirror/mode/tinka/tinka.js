@@ -20,7 +20,7 @@ const KEYWORDS = [
 ];
 
 const SUPPORTS = [
-	"'3126834864", "_fasal"
+	"_fasal"
 ];
 
 CodeMirror.defineSimpleMode("tinka", {
