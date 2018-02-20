@@ -10,19 +10,22 @@ const OPERATORS = [
 	"k[rR]z", "ach", "roft", "ycax", "pielyn", "kinfit"
 ];
 
-const KEYWORDS = [
-	"fal", "laf",
-	"fi", "ol", "if",
-	"cecio", "oicec",
-	"xok"
-];
+const KEYWORDS = ["xok"];
+
+const OPEN_KEYWORDS = ["fal", "fi", "cecio"];
+
+const CLOSE_KEYWORDS = ["laf", "if", "oicec"];
+
+const DELIMITER_KEYWORDS = ["ol"];
 
 CodeMirror.defineSimpleMode("cent", {
 	start: [
 		{regex: new RegExp(`(${OPERATORS.join("|")})(?![^\\s'<>]|'(?!-))`), token: "keyword"},
 		{regex: new RegExp(`(${KEYWORDS.join("|")})(?![^\\s'<>]|'(?!-))`), token: "special"},
-		{regex: /</, token: "special", indent: true},
-		{regex: />/, token: "special", dedent: true},
+		{regex: new RegExp(`(${OPEN_KEYWORDS.join("|")})(?![^\\s'<>]|'(?!-))`), token: "special", indent: true},
+		{regex: new RegExp(`(${CLOSE_KEYWORDS.join("|")})(?![^\\s'<>]|'(?!-))`), token: "special", dedent: true},
+		{regex: new RegExp(`(${DELIMITER_KEYWORDS.join("|")})(?![^\\s'<>]|'(?!-))`), token: "special", indent: true, dedent: true},
+		{regex: /[<>]/, token: "special"},
 		{regex: /\d+(?![^\s'<>]|'(?!-))/, token: "number"},
 		{regex: /'-/, token: "comment", next: "comment"},
 		{regex: /([^\s'<>]|'(?!-))+/, token: null}
@@ -34,6 +37,6 @@ CodeMirror.defineSimpleMode("cent", {
 	meta: {
 		blockCommentStart: "'-",
 		blockCommentEnd: "-'",
-		electricChars: ">"
+		electricInput: new RegExp(`^\\s*(${[...CLOSE_KEYWORDS, ...DELIMITER_KEYWORDS].join("|")})$`)
 	}
 });
