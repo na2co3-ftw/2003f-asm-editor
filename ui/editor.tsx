@@ -11,6 +11,7 @@ import "codemirror/addon/lint/lint.css";
 import "../codemirror/mode/2003lk/2003lk";
 import "../codemirror/mode/tinka/tinka";
 import "../codemirror/mode/cent/cent";
+import "../codemirror/mode/ata2003lk/ata2003lk";
 
 import CachedCompiler, {LANGUAGES, Program, SourceFile} from "./cached-compiler";
 import CodeMirrorComponent, {MarkerInfo} from "./codemirror-component";
@@ -181,6 +182,9 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 					}
 					if (name.endsWith(".cent")) {
 						language = "cent";
+					}
+					if (name.endsWith(".alk")) {
+						language = "ata2003lk";
 					}
 
 					const sources = [...state.sources, {

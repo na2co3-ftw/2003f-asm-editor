@@ -7,7 +7,8 @@ const MNEMONICS = [
 	"ada", "ekc", "dal", "nac",
 	"dto", "d[rR]o", "dtosna",
 	"fi",
-	"fen"
+	"fen",
+	"zali", "ycax", "fenx", "dosn"
 ];
 
 const COMPARES = [
@@ -21,7 +22,7 @@ const REGISTERS = [
 
 const DIRECTIVES = [
 	"'c'i", "'i'c",
-	"l'", "nll",
+	"l'", "nll", "cers",
 	"kue", "xok"
 ];
 
@@ -29,20 +30,28 @@ const BUILTINFUNCTIONS = [
 	"3126834864"
 ];
 
-CodeMirror.defineSimpleMode("2003lk", {
+CodeMirror.defineSimpleMode("ata2003lk", {
 	start: [
 		{regex: new RegExp(`(${MNEMONICS.join("|")})(?![\\w'_-])`), token: "keyword"},
 		{regex: new RegExp(`(${COMPARES.join("|")})(?![\\w'_-])`), token: "builtin"},
 		{regex: new RegExp(`(${REGISTERS.join("|")})(?![\\w'_-])`), token: "variable"},
 		{regex: new RegExp(`(${DIRECTIVES.join("|")})(?![\\w'_-])`), token: "special"},
 		{regex: new RegExp(`(${BUILTINFUNCTIONS.join("|")})(?![\\w'_-])`), token: "builtin"},
+		{regex: /lar(?![\w'_-])/, token: "keyword", indent: true},
+		{regex: /ral(?![\w'_-])/, token: "keyword", dedent: true},
+		{regex: /s(?=\s*@)/, token: "builtin"},
 		{regex: /\d+(?![\w'_-])/, token: "number"},
 		{regex: /[@+]/, token: "operator"},
-		{regex: /;.*/, token: "comment"},
+		{regex: /;/, token: "comment", next: "comment"},
 		{regex: /[^\sFRVXa-z0-9'_-]/, token: "error" },
 		{regex: /[^\s;]+/, token: null}
 	],
+	comment: [
+		{regex: /.*?;/, token: "comment", next: "start"},
+		{regex: /.*/, token: "comment"}
+	],
 	meta: {
-		lineComment: ";"
+		lineComment: ";",
+		electricChars: "ral"
 	}
 });

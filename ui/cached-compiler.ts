@@ -3,12 +3,13 @@ import isEqual = require("lodash.isequal");
 import {fullCompile as compileAsm} from "../2003f/2003lk/parser";
 import {fullCompile as compileTinka} from "../2003f/tinka/compiler";
 import {fullCompile as compileCent} from "../2003f/cent/compiler";
+import {fullCompile as compileAtaAsm} from "../2003f/ata2003lk/parser";
 import {linkModules, Program} from "../2003f/linker";
 import {AsmModule, CompileResult, ParseError, Token} from "../2003f/types";
 
 export {Program};
 
-type Language = "2003lk" | "tinka" | "cent";
+type Language = "2003lk" | "tinka" | "cent" | "ata2003lk";
 
 export interface SourceFile {
 	source: string;
@@ -16,7 +17,7 @@ export interface SourceFile {
 	language: Language;
 }
 
-export const LANGUAGES: Language[] = ["2003lk", "tinka", "cent"];
+export const LANGUAGES: Language[] = ["2003lk", "tinka", "cent", "ata2003lk"];
 
 export interface ErrorsAndWarnings {
 	fileErrors: ParseError[][];
@@ -62,8 +63,10 @@ export default class CachedCompiler {
 					result = compileAsm(file.source, file.name);
 				} else if (file.language == "tinka") {
 					result = compileTinka(file.source, file.name);
-				} else {
+				} else if (file.language == "cent") {
 					result = compileCent(file.source, file.name);
+				} else {
+					result = compileAtaAsm(file.source, file.name);
 				}
 			} catch (e) {
 				if (e instanceof ParseError) {

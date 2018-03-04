@@ -91,16 +91,16 @@ export function isValidLabel(name: string): boolean {
 	);
 }
 
-class AsmParser extends Parser<AsmModule> {
-	private builder: AsmBuilder;
+export class AsmParser extends Parser<AsmModule> {
+	protected builder: AsmBuilder;
 	private isCI = false;
-	private explicitSpecifiedOrder = false;
+	protected explicitSpecifiedOrder = false;
 	private afterFi = false;
 	private afterNll = false;
 	private afterInstruction = false;
 
-	private labelDefinitions = new Map<string, Token>();
-	private labelUses = new Map<string, Token[]>();
+	protected labelDefinitions = new Map<string, Token>();
+	protected labelUses = new Map<string, Token[]>();
 
 	constructor(tokens: Token[], eof: Token, name: string) {
 		super(tokens, eof);
@@ -115,19 +115,7 @@ class AsmParser extends Parser<AsmModule> {
 			});
 		}
 
-		for (const [label, tokens] of this.labelUses) {
-			const def = this.labelDefinitions.has(label);
-			if (!def) {
-				for (const token of tokens) {
-					this.errorWithoutThrow(`'${label}' is not defined`, token);
-				}
-			} else {
-				this.labelDefinitions.delete(label);
-			}
-		}
-		for (const [label, token] of this.labelDefinitions.entries()) {
-			this.warning(`'${label}' is defined but not used`, token);
-		}
+		this.verify();
 
 		try {
 			return this.builder.getAsmModule();
@@ -140,7 +128,7 @@ class AsmParser extends Parser<AsmModule> {
 		}
 	}
 
-	parseInstruction() {
+	private parseInstruction() {
 		const token = this.take();
 		this.builder.setNextToken(token);
 
@@ -148,7 +136,9 @@ class AsmParser extends Parser<AsmModule> {
 			return;
 		}
 
-		if (token.text == "fen") {
+		if (this.parseExtraInstruction(token)) {
+			// nothing
+		} else if (token.text == "fen") {
 			this.builder.fen();
 		} else if (token.text == "nac") {
 			this.builder.nac(this.parseWritableOperand());
@@ -206,8 +196,15 @@ class AsmParser extends Parser<AsmModule> {
 		this.afterInstruction = true;
 	}
 
+	// for override
+	protected parseExtraInstruction(token: Token): boolean {
+		return false;
+	}
+
 	private parseDirective(token: Token) {
-		if (token.text == "'c'i") {
+		if (this.parseExtraDirective(token)) {
+			// nothing
+		} else if (token.text == "'c'i") {
 			this.isCI = true;
 			this.explicitSpecifiedOrder = true;
 		} else if (token.text == "'i'c") {
@@ -253,7 +250,12 @@ class AsmParser extends Parser<AsmModule> {
 		return true;
 	}
 
-	private parseOperand(writable: boolean = false): Value {
+	// for override
+	protected parseExtraDirective(token: Token): boolean {
+		return false;
+	}
+
+	protected parseOperand(writable: boolean = false): Value {
 		const token = this.take();
 		if (token == this.eof) {
 			throw new ParseError("Operand expected", this.eof);
@@ -276,6 +278,10 @@ class AsmParser extends Parser<AsmModule> {
 				return V.reg(token.text);
 			}
 		}
+		const ex = this.parseExtraWritableOperand(token);
+		if (ex != null) {
+			return ex;
+		}
 		if (writable) {
 			throw new ParseError("Invalid operand to write value", token);
 		}
@@ -290,11 +296,16 @@ class AsmParser extends Parser<AsmModule> {
 		throw new ParseError("Invalid operand", token);
 	}
 
-	private parseWritableOperand(): WritableValue {
+	// for override
+	protected parseExtraWritableOperand(token: Token): WritableValue | null {
+		return null;
+	}
+
+	protected parseWritableOperand(): WritableValue {
 		return this.parseOperand(true) as WritableValue;
 	}
 
-	private parseCompare(): Compare {
+	protected parseCompare(): Compare {
 		const token = this.take();
 		if (token != this.eof && isCompare(token.text)) {
 			return token.text;
@@ -302,7 +313,7 @@ class AsmParser extends Parser<AsmModule> {
 		throw new ParseError("Compare keyword expected", token);
 	}
 
-	private parseLabel(strict: boolean = false): Token {
+	protected parseLabel(strict: boolean = false): Token {
 		const token = this.take();
 		if (token == this.eof) {
 			throw new ParseError("Label name expected", token);
@@ -318,7 +329,7 @@ class AsmParser extends Parser<AsmModule> {
 		throw new ParseError("Invalid label name", token);
 	}
 
-	private defineLabel(token: Token) {
+	protected defineLabel(token: Token) {
 		const definedLabel = this.labelDefinitions.get(token.text);
 		if (definedLabel) {
 			this.errorWithoutThrow(`'${token.text}' is already defined`, token);
@@ -327,12 +338,28 @@ class AsmParser extends Parser<AsmModule> {
 		}
 	}
 
-	private useLabel(token: Token) {
+	protected useLabel(token: Token) {
 		let uses = this.labelUses.get(token.text);
 		if (uses) {
 			uses.push(token);
 		} else {
 			this.labelUses.set(token.text, [token]);
+		}
+	}
+
+	protected verify() {
+		for (const [label, tokens] of this.labelUses) {
+			const def = this.labelDefinitions.has(label);
+			if (!def) {
+				for (const token of tokens) {
+					this.errorWithoutThrow(`'${label}' is not defined`, token);
+				}
+			} else {
+				this.labelDefinitions.delete(label);
+			}
+		}
+		for (const [label, token] of this.labelDefinitions.entries()) {
+			this.warning(`'${label}' is defined but not used`, token);
 		}
 	}
 }
