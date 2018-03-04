@@ -96,6 +96,8 @@ class AsmParser extends Parser<AsmModule> {
 	private isCI = false;
 	private explicitSpecifiedOrder = false;
 	private afterFi = false;
+	private afterNll = false;
+	private afterInstruction = false;
 
 	private labelDefinitions = new Map<string, Token>();
 	private labelUses = new Map<string, Token[]>();
@@ -141,15 +143,12 @@ class AsmParser extends Parser<AsmModule> {
 	parseInstruction() {
 		const token = this.take();
 		this.builder.setNextToken(token);
-		if (token.text == "'c'i") {
-			this.isCI = true;
-			this.explicitSpecifiedOrder = true;
+
+		if (this.parseDirective(token)) {
 			return;
-		} else if (token.text == "'i'c") {
-			this.isCI = false;
-			this.explicitSpecifiedOrder = true;
-			return;
-		} else if (token.text == "fen") {
+		}
+
+		if (token.text == "fen") {
 			this.builder.fen();
 		} else if (token.text == "nac") {
 			this.builder.nac(this.parseWritableOperand());
@@ -194,35 +193,6 @@ class AsmParser extends Parser<AsmModule> {
 				c = this.parseWritableOperand();
 			}
 			this.builder.inj(a, b, c);
-		} else if (token.text == "nll") {
-			const label = this.parseLabel();
-			this.defineLabel(label);
-			this.builder.nll(label.text);
-			return;
-		} else if (token.text == "l'") {
-			try {
-				const label = this.parseLabel();
-				this.defineLabel(label);
-				this.builder.l(label.text);
-			} catch (e) {
-				if (e instanceof BuilderError) {
-					throw new ParseError(e.message, token);
-				} else {
-					throw e;
-				}
-			}
-			return;
-		} else if (token.text == "kue") {
-			const label = this.parseLabel();
-			this.useLabel(label);
-			this.builder.kue(label.text, label);
-			this.builder.setHasMain(false);
-			return;
-		} else if (token.text == "xok") {
-			const label = this.parseLabel();
-			this.defineLabel(label);
-			this.builder.xok(label.text, label);
-			return;
 		} else {
 			throw new ParseError("Instruction expected", token);
 		}
@@ -232,6 +202,55 @@ class AsmParser extends Parser<AsmModule> {
 			this.explicitSpecifiedOrder = true; // Show this warning only once
 		}
 		this.afterFi = token.text == "fi";
+		this.afterNll = false;
+		this.afterInstruction = true;
+	}
+
+	private parseDirective(token: Token) {
+		if (token.text == "'c'i") {
+			this.isCI = true;
+			this.explicitSpecifiedOrder = true;
+		} else if (token.text == "'i'c") {
+			this.isCI = false;
+			this.explicitSpecifiedOrder = true;
+		} else if (token.text == "nll") {
+			const label = this.parseLabel(true);
+			this.defineLabel(label);
+			this.builder.nll(label.text);
+		} else if (token.text == "l'") {
+			try {
+				const label = this.parseLabel(true);
+				this.defineLabel(label);
+				this.builder.l(label.text);
+				if (!this.afterInstruction) {
+					this.warning("l' should be directly preceded by an instruction", token);
+				}
+			} catch (e) {
+				if (e instanceof BuilderError) {
+					throw new ParseError(e.message, token);
+				} else {
+					throw e;
+				}
+			}
+		} else if (token.text == "kue") {
+			const label = this.parseLabel();
+			this.useLabel(label);
+			this.builder.kue(label.text, label);
+			this.builder.setHasMain(false);
+		} else if (token.text == "xok") {
+			const label = this.parseLabel(true);
+			this.defineLabel(label);
+			this.builder.xok(label.text, label);
+		} else {
+			return false;
+		}
+
+		if (this.afterNll) {
+			this.warning("nll should be directly followed by an instruction", token);
+		}
+		this.afterNll = token.text == "nll";
+		this.afterInstruction = false;
+		return true;
 	}
 
 	private parseOperand(writable: boolean = false): Value {
