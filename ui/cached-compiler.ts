@@ -6,6 +6,7 @@ import {fullCompile as compileCent} from "../2003f/cent/compiler";
 import {fullCompile as compileAtaAsm} from "../2003f/ata2003lk/parser";
 import {linkModules, Program} from "../2003f/linker";
 import {AsmModule, CompileResult, ParseError, Token} from "../2003f/types";
+import {disassemble} from "../2003f/disasseble";
 
 export {Program};
 
@@ -24,6 +25,37 @@ export interface ErrorsAndWarnings {
 	fileWarnings: ParseError[][];
 	linkErrors: ParseError[];
 	linkWarnings: ParseError[];
+}
+
+function compile(file: SourceFile): CompileResult {
+	let result: CompileResult;
+	try {
+		if (file.language == "2003lk") {
+			result = compileAsm(file.source, file.name);
+		} else if (file.language == "tinka") {
+			result = compileTinka(file.source, file.name);
+		} else if (file.language == "cent") {
+			result = compileCent(file.source, file.name);
+		} else {
+			result = compileAtaAsm(file.source, file.name);
+		}
+	} catch (e) {
+		if (e instanceof ParseError) {
+			result = {data: null, errors: [e], warnings: []};
+		} else {
+			throw e;
+		}
+	}
+	return result;
+}
+
+export function isTranspilableToAsm(language: Language): boolean {
+	return language != "2003lk";
+}
+
+export function TranspileToAsm(file: SourceFile): string | null {
+	const module = compile(file).data;
+	return module && disassemble(module);
 }
 
 export default class CachedCompiler {
@@ -49,32 +81,14 @@ export default class CachedCompiler {
 		this.linkWarnings = [];
 	}
 
-	compile(files: SourceFile[]) {
+	compileAll(files: SourceFile[]) {
 		let shouldLink = false;
 		let hasError = false;
 		files.forEach((file, id) => {
 			if (isEqual(file, this.parsedSources[id])) {
 				return;
 			}
-
-			let result: CompileResult;
-			try {
-				if (file.language == "2003lk") {
-					result = compileAsm(file.source, file.name);
-				} else if (file.language == "tinka") {
-					result = compileTinka(file.source, file.name);
-				} else if (file.language == "cent") {
-					result = compileCent(file.source, file.name);
-				} else {
-					result = compileAtaAsm(file.source, file.name);
-				}
-			} catch (e) {
-				if (e instanceof ParseError) {
-					result = {data: null, errors: [e], warnings: []};
-				} else {
-					throw e;
-				}
-			}
+			let result = compile(file);
 			this.parsedFiles[id] = result.data;
 			this.fileErrors[id] = result.errors;
 			this.fileWarnings[id] = result.warnings;

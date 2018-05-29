@@ -13,7 +13,7 @@ import "../codemirror/mode/tinka/tinka";
 import "../codemirror/mode/cent/cent";
 import "../codemirror/mode/ata2003lk/ata2003lk";
 
-import CachedCompiler, {Language, Program, SourceFile} from "./cached-compiler";
+import CachedCompiler, {Language, Program, SourceFile, TranspileToAsm} from "./cached-compiler";
 import CodeMirrorComponent, {MarkerInfo} from "./codemirror-component";
 import EditorTab from "./editor-tab";
 import EditorStatusBar from "./editor-status-bar";
@@ -125,6 +125,7 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 		this.closeTab = this.closeTab.bind(this);
 		this.renameFile = this.renameFile.bind(this);
 		this.changeLanguage = this.changeLanguage.bind(this);
+		this.transpileFile = this.transpileFile.bind(this);
 		this.parse = this.parse.bind(this);
 	}
 
@@ -273,7 +274,7 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 		}
 	}
 
-	changeLanguage(language: Language) {
+	private changeLanguage(language: Language) {
 		this.setState((state: EditorState) => {
 			const sources = state.sources.slice(0);
 			sources[state.fileId] = Object.assign({}, sources[state.fileId], {
@@ -283,8 +284,21 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 		});
 	}
 
+	private transpileFile() {
+		this.setState((state: EditorState) => {
+			const asm = TranspileToAsm(state.sources[state.fileId]);
+			if (asm == null) {
+				return;
+			}
+			const name = this.uniqueFileName(-1, state.sources[state.fileId].name + ".lk", state.sources);
+			const sources = state.sources.slice(0);
+			sources.splice(state.fileId + 1, 0, {name, source: asm, language: "2003lk"});
+			return {sources, fileId: state.fileId + 1};
+		});
+	}
+
 	private parse() {
-		this.parser.compile(this.state.sources);
+		this.parser.compileAll(this.state.sources);
 		this.setState(this.parser.getErrorsAndWarnings());
 	}
 
@@ -362,6 +376,7 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 				<EditorStatusBar
 					file={this.state.sources[this.state.fileId]}
 					changeLanguage={this.changeLanguage}
+					transpileFile={this.transpileFile}
 				/>
 				<p className="errors">
 					{fileErrors.map(error =>

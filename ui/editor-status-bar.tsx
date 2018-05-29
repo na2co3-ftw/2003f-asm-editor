@@ -1,10 +1,11 @@
 import React = require("react");
 
-import {Language, LANGUAGES, SourceFile} from "./cached-compiler";
+import {isTranspilableToAsm, Language, LANGUAGES, SourceFile} from "./cached-compiler";
 
 interface EditorStatusBarProps {
 	file: SourceFile;
 	changeLanguage: (language: Language) => void
+	transpileFile: () => void
 }
 
 export default class EditorStatusBar extends React.PureComponent<EditorStatusBarProps> {
@@ -33,6 +34,10 @@ export default class EditorStatusBar extends React.PureComponent<EditorStatusBar
 						/>{language + " "}
 					</label>
 				)}
+				<button
+					disabled={!isTranspilableToAsm(this.props.file.language)}
+					onClick={this.props.transpileFile}
+				>トランスパイル</button>
 			</div>
 		);
 	}
