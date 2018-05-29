@@ -85,9 +85,8 @@ function isWhiteSpace(char: string): boolean {
 
 class AtaAsmParser extends AsmParser {
 	private larCount = 0;
-	private larSitCount = 0;
+	private larStack: number[] = [];
 	private larToken: Token[] = [];
-	private ral0: Token | null = null;
 	private internalLabels = new Set<string>();
 
 	constructor(tokens: Token[], eof: Token, name: string) {
@@ -109,21 +108,20 @@ class AtaAsmParser extends AsmParser {
 			this.builder.krz(V.f5io, V.xx);
 		} else if (token.text == "lar") {
 			this.larCount++;
+			this.larStack.push(this.larCount);
 			this.larToken[this.larCount] = token;
 			this.defineInternalLabel("lar" + this.larCount);
 			this.builder.nll("lar" + this.larCount);
 			this.builder.fi(this.parseOperand(), this.parseOperand(), this.parseCompare());
 			this.builder.malkrz(V.label("lar-sit" + this.larCount), V.xx);
 		} else if (token.text == "ral") {
-			if (this.larCount == 0) {
-				this.ral0 = token;
-			} else if (this.larSitCount == this.larCount) {
-				throw new ParseError("Duplicating 'ral'", token);
+			if (this.larStack.length == 0) {
+				throw new ParseError("Unexpected 'ral'", token);
 			}
-			this.larSitCount = this.larCount;
-			this.builder.krz(V.label("lar" + this.larSitCount), V.xx);
-			this.defineInternalLabel("lar-sit" + this.larSitCount);
-			this.builder.nll("lar-sit" + this.larSitCount);
+			const count = this.larStack.pop();
+			this.builder.krz(V.label("lar" + count), V.xx);
+			this.defineInternalLabel("lar-sit" + count);
+			this.builder.nll("lar-sit" + count);
 			this.builder.fen();
 		} else {
 			return false;
@@ -194,13 +192,6 @@ class AtaAsmParser extends AsmParser {
 	}
 
 	protected verify() {
-		if (this.ral0) {
-			if (this.labelDefinitions.has("lar0")) {
-				this.warning("Not found corresponding 'lar'", this.ral0);
-			} else {
-				this.errorWithoutThrow("Not found corresponding 'lar'", this.ral0);
-			}
-		}
 		for (let i = 1; i <= this.larCount; i++) {
 			if (!this.internalLabels.has("lar-sit" + i)) {
 				if (this.labelDefinitions.has("lar-sit" + i)) {
@@ -227,9 +218,6 @@ class AtaAsmParser extends AsmParser {
 			}
 		}
 		for (const [label, token] of this.labelDefinitions.entries()) {
-			if (label == "lar0" && this.ral0) {
-				continue;
-			}
 			if (label.startsWith("lar-sit")) {
 				const count = label.substr(7);
 				if (/\d+/.test(count)) {
