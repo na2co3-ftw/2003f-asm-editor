@@ -177,7 +177,7 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 				let source = (e.target as FileReader).result.replace(/\r\n?/g, "\n");
 				this.setState((state: EditorState) => {
 					const name = this.uniqueFileName(state.sources.length, file.name, state.sources);
-					let language = "2003lk";
+					let language: Language = "2003lk";
 					if (name.endsWith(".tinka")) {
 						language = "tinka";
 					}
@@ -218,7 +218,7 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 	private newTab() {
 		this.setState((state: EditorState) => {
 			const name = this.uniqueFileName(state.sources.length, "untitled", state.sources);
-			const sources = [...state.sources, {name: name, source: "", language: "2003lk"}];
+			const sources: SourceFile[] = [...state.sources, {name: name, source: "", language: "2003lk"}];
 			return {sources, fileId: sources.length - 1};
 		});
 	}
@@ -230,7 +230,7 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 	private closeTab(id: number){
 		this.setState((state: EditorState) => {
 			if (state.sources.length <= 1) {
-				return {};
+				return null;
 			}
 			const sources = state.sources.slice(0);
 			sources.splice(id, 1);
@@ -288,7 +288,7 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 		this.setState((state: EditorState) => {
 			const asm = TranspileToAsm(state.sources[state.fileId]);
 			if (asm == null) {
-				return;
+				return null;
 			}
 			const name = this.uniqueFileName(-1, state.sources[state.fileId].name + ".lk", state.sources);
 			const sources = state.sources.slice(0);
