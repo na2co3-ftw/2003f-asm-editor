@@ -96,8 +96,10 @@ div {
 	border: 1px solid black;
 	border-top-style: none;
 	cursor: default;
-	text-align: right;
 	padding: 0.2em 0.5em;
+}
+.editor-status-bar .active {
+	font-weight: bold;
 }
 
 .errors, .error {

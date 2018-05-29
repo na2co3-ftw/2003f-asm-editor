@@ -13,7 +13,7 @@ import "../codemirror/mode/tinka/tinka";
 import "../codemirror/mode/cent/cent";
 import "../codemirror/mode/ata2003lk/ata2003lk";
 
-import CachedCompiler, {LANGUAGES, Program, SourceFile} from "./cached-compiler";
+import CachedCompiler, {Language, Program, SourceFile} from "./cached-compiler";
 import CodeMirrorComponent, {MarkerInfo} from "./codemirror-component";
 import EditorTab from "./editor-tab";
 import EditorStatusBar from "./editor-status-bar";
@@ -273,13 +273,11 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 		}
 	}
 
-	changeLanguage() {
+	changeLanguage(language: Language) {
 		this.setState((state: EditorState) => {
 			const sources = state.sources.slice(0);
-			const language = sources[state.fileId].language;
-			const newLanguage = LANGUAGES[(LANGUAGES.indexOf(language) + 1) % LANGUAGES.length];
 			sources[state.fileId] = Object.assign({}, sources[state.fileId], {
-				language: newLanguage
+				language: language
 			});
 			return {sources};
 		});

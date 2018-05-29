@@ -9,7 +9,7 @@ import {AsmModule, CompileResult, ParseError, Token} from "../2003f/types";
 
 export {Program};
 
-type Language = "2003lk" | "tinka" | "cent" | "ata2003lk";
+export type Language = "2003lk" | "tinka" | "cent" | "ata2003lk";
 
 export interface SourceFile {
 	source: string;

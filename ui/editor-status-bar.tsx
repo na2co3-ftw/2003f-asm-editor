@@ -1,21 +1,38 @@
 import React = require("react");
 
-import {SourceFile} from "./cached-compiler";
+import {Language, LANGUAGES, SourceFile} from "./cached-compiler";
 
 interface EditorStatusBarProps {
 	file: SourceFile;
-	changeLanguage: () => void
+	changeLanguage: (language: Language) => void
 }
 
 export default class EditorStatusBar extends React.PureComponent<EditorStatusBarProps> {
+	constructor(props: EditorStatusBarProps) {
+		super(props);
+		this.onLanguageRadioClicked = this.onLanguageRadioClicked.bind(this);
+	}
+
+	private onLanguageRadioClicked(e: React.ChangeEvent<HTMLInputElement>) {
+		this.props.changeLanguage(e.target.value as Language);
+	}
+
 	render() {
 		return (
 			<div
 				className="editor-status-bar"
-				onClick={this.props.changeLanguage}
 			>
-				<span style={{fontSize: "70%"}}>クリックで言語を変更</span>
-				{": " + this.props.file.language}
+				{LANGUAGES.map(language =>
+					<label className={this.props.file.language == language ? "active" : ""}>
+						<input
+							type="radio"
+							name="language"
+							value={language}
+							checked={this.props.file.language == language}
+							onChange={this.onLanguageRadioClicked}
+						/>{language + " "}
+					</label>
+				)}
 			</div>
 		);
 	}
