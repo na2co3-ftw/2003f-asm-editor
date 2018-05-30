@@ -38,7 +38,7 @@ const enum ExecResult {
 export class Hardware {
 	cpu: CPU;
 	memory: Memory;
-	program: Program;
+	program: Program | null = null;
 	log: string[];
 
 	constructor() {
@@ -74,6 +74,9 @@ export class Hardware {
 	}
 
 	private execOneInstruction(breakNewStep: boolean): ExecResult {
+		if (this.program == null) {
+			return ExecResult.END;
+		}
 		const xxInst = this.program.readNX(this.cpu.nx);
 		if (xxInst == null) {
 			throw new RuntimeError("nx has an invalid address " + this.cpu.nx);

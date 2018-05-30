@@ -1,4 +1,4 @@
-import React = require("react");
+import React from "react";
 
 import {isTranspilableToAsm, Language, LANGUAGES, SourceFile} from "./cached-compiler";
 

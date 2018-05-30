@@ -1,11 +1,11 @@
 /// <reference path="../codemirror/codemirror-typing-complement.d.ts" />
 
-import React = require("react");
+import React from "react";
 
-import CodeMirror = require("codemirror");
+import CodeMirror from "codemirror";
 import "codemirror/lib/codemirror.css";
 
-import isEqual = require("lodash.isequal");
+import isEqual from "lodash.isequal";
 
 export interface MarkerInfo {
 	from: CodeMirror.Position,
@@ -23,8 +23,8 @@ interface CodeMirrorProps {
 }
 
 export default class CodeMirrorComponent extends React.Component<CodeMirrorProps> {
-	private el: HTMLElement;
-	private editor: CodeMirror.Editor;
+	private el!: HTMLElement;
+	private editor!: CodeMirror.Editor;
 	private acceptEvents = false;
 	private textMarkers: CodeMirror.TextMarker[] = [];
 

@@ -1,4 +1,4 @@
-import isEqual = require("lodash.isequal");
+import isEqual from "lodash.isequal";
 
 import {fullCompile as compileAsm} from "../2003f/2003lk/parser";
 import {fullCompile as compileTinka} from "../2003f/tinka/compiler";
@@ -68,10 +68,6 @@ export default class CachedCompiler {
 	private linkWarnings: ParseError[];
 
 	constructor() {
-		this.clear();
-	}
-
-	clear() {
 		this.parsedSources = [];
 		this.parsedFiles = [];
 		this.program = null;

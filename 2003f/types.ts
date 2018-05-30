@@ -118,9 +118,12 @@ export namespace Value {
 		constructor(private label: string) {}
 
 		getValue(hw: Hardware): number {
+			if (hw.program == null) {
+				throw new RuntimeError(`Undefined label '${this.label}'`);
+			}
 			const address = hw.program.resolveLabel(hw.cpu.nx, this.label);
 			if (address == null) {
-				throw new RuntimeError(`Undefined label \`${this.label}\``);
+				throw new RuntimeError(`Undefined label '${this.label}'`);
 			}
 			return address;
 		}

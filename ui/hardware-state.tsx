@@ -1,5 +1,5 @@
-import React = require("react");
-import classNames = require("classnames");
+import React from "react";
+import classNames from "classnames";
 
 import {Hardware} from "../2003f/execute";
 import {SECTION_SIZE} from "../2003f/memory";

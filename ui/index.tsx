@@ -1,5 +1,5 @@
-import React = require("react");
-import ReactDOM = require("react-dom");
+import React from "react";
+import ReactDOM from "react-dom";
 
 import Editor, {MarkerInfoM} from "./editor";
 import HardwareState from "./hardware-state";
@@ -57,7 +57,7 @@ interface AppState {
 }
 
 class App extends React.Component<{}, AppState> {
-	private editor: Editor;
+	private editor!: Editor;
 	private machine: Hardware = new Hardware();
 	private timeOutHandler: number | null = null;
 
@@ -190,6 +190,9 @@ class App extends React.Component<{}, AppState> {
 	}
 
 	private getCurrentNXToken(): Token | null {
+		if (this.machine.program == null) {
+			return null;
+		}
 		const inst = this.machine.program.readNX(this.machine.cpu.nx);
 		if (inst != null && inst.token) {
 			return inst.token;

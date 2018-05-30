@@ -1,6 +1,6 @@
-import React = require("react");
-import classNames = require("classnames");
-import CodeMirror = require("codemirror");
+import React from "react";
+import classNames from "classnames";
+import CodeMirror from "codemirror";
 
 import "codemirror/theme/neat.css";
 
@@ -80,9 +80,9 @@ function parseErrorsToAnnotations(errors: ParseError[], severity: string): CodeM
 }
 
 export default class Editor extends React.Component<EditorProps, EditorState> {
-	private cm: CodeMirrorComponent;
+	private cm!: CodeMirrorComponent;
 	private lintOptions: CodeMirror.LintOptions;
-	private openFileInput: HTMLInputElement;
+	private openFileInput!: HTMLInputElement;
 	private parser: CachedCompiler;
 	private changeTimeout: number | null = null;
 
