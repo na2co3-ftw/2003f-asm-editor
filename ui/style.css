@@ -51,19 +51,19 @@ div {
 	height: 30em;
 }
 
-.monospace {
-	font-family: Consolas, monospace;
+.monospace, .CodeMirror {
+	font-family: "Consolas", "Courier New", monospace;
 }
 
 .liparxe .lineparine {
-	font-family: "jietoden", sans-serif;
+	font-family: "jietoden", Arial, Helvetica, "Hiragino Kaku Gothic Pro", Meiryo, "MS PGothic", sans-serif;
 }
 
 .liparxe .lineparine .monospace,
 .liparxe .monospace .lineparine,
 .liparxe .lineparine.monospace,
 .liparxe .CodeMirror {
-	font-family: "jietoden", monospace;
+	font-family: "jietoden", "Consolas", "Courier New", monospace;
 }
 
 .editor-tab {
