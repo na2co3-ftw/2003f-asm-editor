@@ -17,6 +17,10 @@ const KEYWORDS = [
 	"kak", "krzq", "kRzq", "achq", "roftq", "malef", "felam"
 ];
 
+const IMPROPER_SUBROUTINE_REGEXP = /[^FRVXa-z0-9,.?!':+|=$\\@&#"()《》_-]/;
+
+const RESERVED_LABEL_REGEXP = /^(fal|laf|ol|if|cecio|oicec|leles-niv|leles-situv)\d+$/;
+
 export abstract class Operation {
 	constructor(public token: Token) {}
 }
@@ -180,7 +184,7 @@ export class CentParser extends Parser<CentParsed> {
 		if (!isValidSubroutine(nameToken.text)) {
 			this.errorWithoutThrow("Invalid subroutine name", nameToken);
 		}
-		if (/[^\sFRVXa-z0-9,.?!':+|=$\\@&#"()《》_-]/.test(nameToken.text)) {
+		if (IMPROPER_SUBROUTINE_REGEXP.test(nameToken.text)) {
 			this.warning("Improper subroutine name", nameToken);
 		}
 
@@ -209,6 +213,9 @@ export class CentParser extends Parser<CentParsed> {
 		if (!isValidSubroutine(nameToken.text) ||
 			!isValidLabel(nameToken.text)) {
 			this.errorWithoutThrow("Invalid function name", nameToken);
+		}
+		if (RESERVED_LABEL_REGEXP.test(nameToken.text)) {
+			this.warning("Improper function name", nameToken);
 		}
 
 		const argNumToken = this.take();

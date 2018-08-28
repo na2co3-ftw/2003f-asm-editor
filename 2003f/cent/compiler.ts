@@ -37,6 +37,7 @@ class CentCompiler {
 	private recursiveSubroutines = new Set<Subroutine>();
 	private duplicatedSubroutines = new Map<Subroutine, Set<Subroutine>>();
 	private usedSubroutines = new Set<Subroutine>();
+	private internalLabels = new Set<string>();
 
 	private functionMap = new Map<string, ExternalFunction>();
 	private usedFunctions = new Set<ExternalFunction>();
@@ -104,7 +105,9 @@ class CentCompiler {
 			}
 		}
 		for (const func of this.functionMap.values()) {
-			if (!this.usedFunctions.has(func)) {
+			if (this.internalLabels.has(func.name.text)) {
+				this.errors.push(new ParseError(`'${func.name.text}' is defined internally`, func.name));
+			} else if (!this.usedFunctions.has(func)) {
 				this.warnings.push(new ParseError(`'${func.name.text}' is defined but not used`, func.name));
 			}
 		}
@@ -142,18 +145,22 @@ class CentCompiler {
 			if (operation.ol != null) {
 				builder.krz(V.label("if" + count), V.xx);
 
+				this.internalLabels.add("ol" + count);
 				builder.nll("ol" + count);
 				for (const op of operation.ol) {
 					this.compileOperation(op);
 				}
 
+				this.internalLabels.add("if" + count);
 				builder.nll("if" + count);
 			} else {
+				this.internalLabels.add("ol" + count);
 				builder.nll("ol" + count);
 			}
 		} else if (operation instanceof Operation.Cecio) {
 			const count = ++this.cecioCount;
 
+			this.internalLabels.add("cecio" + count);
 			builder.nll("cecio" + count);
 			builder.fi(V.f5io, V.f5_4io, "llo");
 			builder.malkrz(V.label("oicec" + count), V.xx);
@@ -164,11 +171,13 @@ class CentCompiler {
 			builder.ata(V.imm(1), V.f5io);
 			builder.krz(V.label("cecio" + count), V.xx);
 
+			this.internalLabels.add("oicec" + count);
 			builder.nll("oicec" + count);
 			builder.ata(V.imm(8), V.f5);
 		} else if (operation instanceof Operation.Fal) {
 			const count = ++this.falCount;
 
+			this.internalLabels.add("fal" + count);
 			builder.nll("fal" + count);
 			builder.fi(V.f5io, V.imm(0), "clo");
 			builder.malkrz(V.label("laf" + count), V.xx);
@@ -178,6 +187,7 @@ class CentCompiler {
 			}
 			builder.krz(V.label("fal" + count), V.xx);
 
+			this.internalLabels.add("laf" + count);
 			builder.nll("laf" + count);
 		}
 	}
@@ -202,9 +212,11 @@ class CentCompiler {
 			builder.krz(V.imm(0), V.f5_4io);
 			builder.krz(V.label("leles-situv" + count), V.xx);
 
+			this.internalLabels.add("leles-niv" + count);
 			builder.nll("leles-niv" + count);
 			builder.krz(V.imm(1), V.f5_4io);
 
+			this.internalLabels.add("leles-situv" + count);
 			builder.nll("leles-situv" + count);
 			builder.ata(V.imm(4), V.f5);
 		} else if (text == "krz" || text == "kRz") {
