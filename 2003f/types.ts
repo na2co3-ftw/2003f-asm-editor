@@ -145,10 +145,10 @@ export namespace Instruction {
 		constructor(private src: Value, private dst: WritableValue) {}
 
 		exec(hw: Hardware) {
-			this.dst.setValue(hw, this.compute(this.dst.getValue(hw), this.src.getValue(hw)));
+			this.dst.setValue(hw, this.compute(this.dst.getValue(hw), this.src.getValue(hw), hw));
 		}
 
-		protected abstract compute(a: number, b: number): number;
+		protected abstract compute(a: number, b: number, hw:Hardware): number;
 
 		toString(): string {
 			return `${this.getName()} ${this.src} ${this.dst}`;
@@ -183,17 +183,30 @@ export namespace Instruction {
 	}
 
 	export class Dto extends BinaryInstruction {
-		protected compute(a: number, b: number): number { return (b & 0xffffffe0) == 0 ? (a >>> b) | 0 : 0; }
+		protected compute(a: number, b: number, hw: Hardware): number {
+			if ((b & 0xffffffc0) != 0) {
+				hw.warning(`Shift amount ${b} is larger than 63`);
+			}
+			return (b & 0xffffffe0) == 0 ? (a >>> b) | 0 : 0;
+		}
 		protected getName(): string { return "dto"; }
 	}
 
 	export class Dro extends BinaryInstruction {
-		protected compute(a: number, b: number): number { return (b & 0xffffffe0) == 0 ? a << b : 0; }
+		protected compute(a: number, b: number, hw: Hardware): number {
+			if ((b & 0xffffffc0) != 0) {
+				hw.warning(`Shift amount ${b} is larger than 63`);
+			}
+			return (b & 0xffffffe0) == 0 ? a << b : 0;
+		}
 		protected getName(): string { return "dro"; }
 	}
 
 	export class Dtosna extends BinaryInstruction {
-		protected compute(a: number, b: number): number {
+		protected compute(a: number, b: number, hw: Hardware): number {
+			if ((b & 0xffffffc0) != 0) {
+				hw.warning(`Shift amount ${b} is larger than 63`);
+			}
 			if ((b & 0xffffffe0) == 0) {
 				return a >> b;
 			} else {

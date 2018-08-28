@@ -32,7 +32,7 @@ export class CPU {
 }
 
 const enum ExecResult {
-	CONTINUE, END, BREAK
+	CONTINUE, END, BREAK, ERROR
 }
 
 export class Hardware {
@@ -40,12 +40,16 @@ export class Hardware {
 	memory: Memory;
 	program: Program | null = null;
 	log: string[];
+	errors: RuntimeError[];
+	warnings: RuntimeError[];
 
 	constructor() {
 		this.cpu = new CPU(initialAddress);
-		this.memory = new Memory();
+		this.memory = new Memory(this);
 		this.memory.write(initialF5, outermostRetAddress);
 		this.log = [];
+		this.errors = [];
+		this.warnings = [];
 	}
 
 	execute(program: Program, callback: () => void) {
@@ -70,7 +74,7 @@ export class Hardware {
 		while (ret == ExecResult.CONTINUE) {
 			ret = this.execOneInstruction(true);
 		}
-		return ret != ExecResult.END;
+		return ret != ExecResult.END && ret != ExecResult.ERROR;
 	}
 
 	private execOneInstruction(breakNewStep: boolean): ExecResult {
@@ -79,7 +83,8 @@ export class Hardware {
 		}
 		const xxInst = this.program.readNX(this.cpu.nx);
 		if (xxInst == null) {
-			throw new RuntimeError("nx has an invalid address " + this.cpu.nx);
+			this.errors.push(new RuntimeError("nx has an invalid address " + this.cpu.nx));
+			return ExecResult.ERROR;
 		}
 		const {next, instruction, token} = xxInst;
 		if (breakNewStep && token) {
@@ -87,7 +92,15 @@ export class Hardware {
 		}
 		
 		this.cpu.xx = next;
-		instruction.exec(this);
+		try {
+			instruction.exec(this);
+		} catch (e) {
+			if (e instanceof RuntimeError) {
+				this.errors.push(e);
+				return ExecResult.ERROR;
+			}
+			throw e;
+		}
 		this.updateNX();
 
 		if (this.cpu.nx == outermostRetAddress) {
@@ -104,11 +117,15 @@ export class Hardware {
 
 	finalize() {
 		if (this.cpu.f5 != initialF5) {
-			throw new RuntimeError(`f5 register was not preserved after the call. It should be in ${initialF5} but is actually in ${this.cpu.f5}`);
+			this.errors.push(new RuntimeError(`f5 register was not preserved after the call. It should be in ${initialF5} but is actually in ${this.cpu.f5}`));
 		}
 	}
 
 	updateNX() {
 		this.cpu.nx = this.cpu.xx;
+	}
+
+	warning(message: string) {
+		this.warnings.push(new RuntimeError(message));
 	}
 }

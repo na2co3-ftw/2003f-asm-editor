@@ -6,7 +6,7 @@ import HardwareState from "./hardware-state";
 import "./style.css";
 
 import {Hardware} from "../2003f/execute";
-import {RuntimeError, Token} from "../2003f/types";
+import {Token} from "../2003f/types";
 
 document.addEventListener("DOMContentLoaded", function () {
 	ReactDOM.render(<App/>, document.getElementById("root")!);
@@ -53,7 +53,6 @@ interface AppState {
 	pausing: boolean;
 	tickInterval: number;
 	execSpeed: number;
-	runtimeErrors: string;
 }
 
 class App extends React.Component<{}, AppState> {
@@ -70,7 +69,6 @@ class App extends React.Component<{}, AppState> {
 			pausing: false,
 			tickInterval: 20,
 			execSpeed: Math.floor(Math.log(1000 / 20) * 100 + 0.5),
-			runtimeErrors: ""
 		};
 
 		this.liparxeChange = this.liparxeChange.bind(this);
@@ -106,7 +104,7 @@ class App extends React.Component<{}, AppState> {
 		this.machine.load(program);
 		this.machine.execOneStep(true);
 		// this.forceUpdate();
-		this.setState({executing: true, runtimeErrors: ""});
+		this.setState({executing: true});
 		return true;
 	}
 
@@ -139,18 +137,8 @@ class App extends React.Component<{}, AppState> {
 	}
 
 	private execOneStep() {
-		let continuing = false;
-		let errors = "";
-		try {
-			continuing = this.machine.execOneStep();
-		} catch (e) {
-			if (e instanceof RuntimeError) {
-				continuing = false;
-				errors = e.message;
-			}
-		}
-		//this.forceUpdate();
-		this.setState({runtimeErrors: errors});
+		const continuing = this.machine.execOneStep();
+		this.forceUpdate();
 		return continuing;
 	}
 
@@ -264,8 +252,6 @@ class App extends React.Component<{}, AppState> {
 							type="range" min="70" max="600" step="1"
 							value={this.state.execSpeed} onChange={this.changeSpeed}
 						/>
-
-						<p className="errors">{this.state.runtimeErrors}</p>
 
 						<HardwareState machine={this.machine} active={this.state.executing}/>
 					</div>

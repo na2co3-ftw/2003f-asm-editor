@@ -1,5 +1,12 @@
 # 2003f Editor 詳細仕様
 
+## 2003fインタプリタ
+参照元: [Haskell Interpreter版](https://github.com/jurliyuuri/OS/tree/master/assembler)
+
+### 追加した実行時警告
+* 4バイトでアラインメントされていないメモリアクセス
+* 64以上のビットシフト
+
 ## 2003lk
 参照元: [Haskell Interpreter版](https://github.com/jurliyuuri/OS/tree/master/assembler)
 

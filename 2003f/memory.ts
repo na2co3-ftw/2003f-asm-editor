@@ -1,3 +1,5 @@
+import {Hardware} from "./execute";
+
 function decompose(a: number): [number, number, number, number] {
 	return [
 		a >>> 24,
@@ -15,10 +17,13 @@ export const SECTION_SIZE = 4;
 
 export class Memory {
 	data: {[address: number]: number} = {};
-	garbages: {address: number, value: number}[] = [];
 	usingSections: number[] = [];
+	constructor(private hw: Hardware) {}
 
 	write(address: number, value: number) {
+		if ((address & 0x3) != 0) {
+			this.hw.warning(`Write memory by not aligned address ${address}`);
+		}
 		const [a, b, c, d] = decompose(value);
 		//console.log(`${address} <- ${value}`);
 		this.writeByte(address, a);
@@ -37,6 +42,9 @@ export class Memory {
 	}
 
 	read(address: number): number {
+		if ((address & 0x3) != 0) {
+			this.hw.warning(`Read memory by not aligned address ${address}`);
+		}
 		const a = this.readByte(address);
 		const b = this.readByte(address + 1);
 		const c = this.readByte(address + 2);
@@ -50,7 +58,7 @@ export class Memory {
 			return this.data[address];
 		}
 		const value = Math.floor(Math.random() * 0x100);
-		this.garbages.push({address, value});
+		this.hw.warning("Read undefined memory");
 		this.writeByte(address, value);
 		return value;
 	}

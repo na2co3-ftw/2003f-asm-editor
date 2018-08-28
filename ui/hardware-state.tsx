@@ -113,11 +113,21 @@ export default class HardwareState extends React.Component<HardwareStateProps, H
 						Memory:<br/>
 						<span className="lineparine">{memoryNodes}</span>
 					</p>
-					<p className="monospace">
+					{machine.log.length != 0 ? <p className="monospace">
 						Logs:<br/>
 						<span className="lineparine">
-							{machine.log.join("\n")}
+							{machine.log.join(", ")}
 						</span>
+					</p> : ""}
+					<p className="errors">
+						{machine.errors.map(error =>
+							[error.message, <br/>]
+						)}
+					</p>
+					<p className="warnings">
+						{machine.warnings.map(error =>
+							[error.message, <br/>]
+						)}
 					</p>
 				</div>
 			</div>
