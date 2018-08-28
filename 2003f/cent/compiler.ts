@@ -12,7 +12,7 @@ export function fullCompile(str: string, file: string = ""): CompileResult {
 		return {
 			data: null,
 			errors: tokenized.errors.concat(parsed.errors),
-			warnings: parsed.warnings
+			warnings: tokenized.warnings.concat(parsed.warnings)
 		};
 	}
 
@@ -20,7 +20,7 @@ export function fullCompile(str: string, file: string = ""): CompileResult {
 	return {
 		data: compiled.data,
 		errors: tokenized.errors.concat(parsed.errors, compiled.errors),
-		warnings: parsed.warnings.concat(compiled.warnings)
+		warnings: tokenized.warnings.concat(parsed.warnings, compiled.warnings)
 	};
 }
 
@@ -35,6 +35,7 @@ class CentCompiler {
 	private subroutineMap = new Map<string, Subroutine>();
 	private subroutineCallStack: Subroutine[] = [];
 	private recursiveSubroutines = new Set<Subroutine>();
+	private duplicatedSubroutines = new Map<Subroutine, Set<Subroutine>>();
 	private usedSubroutines = new Set<Subroutine>();
 
 	private functionMap = new Map<string, ExternalFunction>();
@@ -50,7 +51,10 @@ class CentCompiler {
 	compile(): {data: AsmModule, errors: ParseError[], warnings: ParseError[]} {
 		for (const sub of this.parsed.subroutines) {
 			if (this.subroutineMap.has(sub.name.text)) {
-				this.errors.push(new ParseError(`'${sub.name.text}' is already defined`, sub.name));
+				let definedSub = this.subroutineMap.get(sub.name.text)!;
+				let dups = this.duplicatedSubroutines.get(definedSub) || new Set();
+				dups.add(sub);
+				this.duplicatedSubroutines.set(definedSub, dups);
 			} else {
 				this.subroutineMap.set(sub.name.text, sub);
 			}
@@ -85,6 +89,18 @@ class CentCompiler {
 		for (const sub of this.subroutineMap.values()) {
 			if (!this.usedSubroutines.has(sub)) {
 				this.warnings.push(new ParseError(`'${sub.name.text}' is defined but not used`, sub.name));
+			}
+			let dups = this.duplicatedSubroutines.get(sub);
+			if (dups) {
+				if (this.usedSubroutines.has(sub)) {
+					for (const dup of dups) {
+						this.errors.push(new ParseError(`'${dup.name.text}' is already defined`, dup.name));
+					}
+				} else {
+					for (const dup of dups) {
+						this.warnings.push(new ParseError(`'${dup.name.text}' is already defined`, dup.name));
+					}
+				}
 			}
 		}
 		for (const func of this.functionMap.values()) {
@@ -212,6 +228,12 @@ class CentCompiler {
 			builder.krz(V.f0, V.f5io);
 		} else if (this.subroutineMap.has(text)) {
 			const sub = this.subroutineMap.get(text)!;
+			this.usedSubroutines.add(sub);
+
+			if (this.duplicatedSubroutines.has(sub)) {
+				return;
+			}
+
 			const i = this.subroutineCallStack.indexOf(sub);
 			if (i >= 0) {
 				for (const s of this.subroutineCallStack.slice(i)) {
@@ -219,7 +241,6 @@ class CentCompiler {
 				}
 				return;
 			}
-			this.usedSubroutines.add(sub);
 
 			builder.fen(); // for step execution
 			this.subroutineCallStack.push(sub);

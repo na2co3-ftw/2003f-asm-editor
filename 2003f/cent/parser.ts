@@ -12,9 +12,9 @@ export const TRI_OPERATORS = ["lat", "latsna"];
 
 const KEYWORDS = [
 	"nac", ...BI_OPERATORS, ...TRI_OPERATORS, ...COMPARES,
-	"krzq", "kRzq", "achq", "roftq",
 	"krz", "kRz", "ach", "roft", "ycax", "pielyn", "kinfit",
-	"fal", "laf", "fi", "ol", "if", "cecio", "oicec", "<", ">"
+	"fal", "laf", "fi", "ol", "if", "cecio", "oicec", "<", ">",
+	"kak", "krzq", "kRzq", "achq", "roftq", "malef", "felam"
 ];
 
 export abstract class Operation {
@@ -59,11 +59,13 @@ export interface ExternalFunction {
 	argNum: number;
 }
 
-export function tokenize(source: string, file: string = ""): {tokens: Token[], eof: Token, errors: ParseError[]} {
+export function tokenize(source: string, file: string = ""):
+	{tokens: Token[], eof: Token, errors: ParseError[], warnings: ParseError[]} {
 	let pos = 0;
 	let row = 0;
 	let column = 0;
 	let tokens: Token[] = [];
+	let warnings: ParseError[] = [];
 	while (true) {
 		let text = "";
 
@@ -75,7 +77,7 @@ export function tokenize(source: string, file: string = ""): {tokens: Token[], e
 				while (source.substr(pos, 2) != "-'") {
 					if (pos >= source.length) {
 						const eof = new Token("", row, column, file);
-						return {tokens, eof, errors: [new ParseError(`Not found "-'"`, eof)]};
+						return {tokens, eof, errors: [new ParseError(`Not found "-'"`, eof)], warnings};
 					}
 					advance();
 				}
@@ -111,9 +113,14 @@ export function tokenize(source: string, file: string = ""): {tokens: Token[], e
 			text += char;
 			advance();
 		}
-		tokens.push(new Token(text, startRow, startColumn, file));
+		let token = new Token(text, startRow, startColumn, file);
+		if (pos == source.length) {
+			warnings.push(new ParseError("Ignored Token (need whitespace before EOF)", token));
+		} else {
+			tokens.push(token);
+		}
 	}
-	return {tokens, eof: new Token("", row, column, file), errors: []};
+	return {tokens, eof: new Token("", row, column, file), errors: [], warnings};
 
 	function advance() {
 		if (source[pos] == "\n") {
@@ -134,6 +141,10 @@ export interface CentParsed {
 	operations: Operation[],
 	subroutines: Subroutine[],
 	functions: ExternalFunction[]
+}
+
+function isValidSubroutine(name: string): boolean {
+	return !/^\d/.test(name) && KEYWORDS.indexOf(name) < 0;
 }
 
 export class CentParser extends Parser<CentParsed> {
@@ -166,8 +177,7 @@ export class CentParser extends Parser<CentParsed> {
 		if (nameToken == this.eof || nameToken.text == ">") {
 			throw new ParseError("Subroutine name expected", nameToken);
 		}
-		if (/^\d/.test(nameToken.text) ||
-			KEYWORDS.indexOf(nameToken.text) >= 0) {
+		if (!isValidSubroutine(nameToken.text)) {
 			this.errorWithoutThrow("Invalid subroutine name", nameToken);
 		}
 		if (/[^\sFRVXa-z0-9,.?!':+|=$\\@&#"()《》_-]/.test(nameToken.text)) {
@@ -196,9 +206,8 @@ export class CentParser extends Parser<CentParsed> {
 		if (nameToken == this.eof || nameToken.text == ">") {
 			throw new ParseError("Function name expected", nameToken);
 		}
-		if (/^\d/.test(nameToken.text) ||
-			!isValidLabel(nameToken.text) ||
-			KEYWORDS.indexOf(nameToken.text) >= 0) {
+		if (!isValidSubroutine(nameToken.text) ||
+			!isValidLabel(nameToken.text)) {
 			this.errorWithoutThrow("Invalid function name", nameToken);
 		}
 
