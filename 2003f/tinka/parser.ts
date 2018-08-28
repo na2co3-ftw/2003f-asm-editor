@@ -171,11 +171,13 @@ const WARNING_KEYWORDS = [
 
 const RESERVED_LABEL_REGEXP = /^(fi|fal(-rinyv)?|dosnud)\d+$/;
 
-export function tokenize(source: string, file: string = ""): {tokens: Token[], eof: Token} {
+export function tokenize(source: string, file: string = ""):
+	{tokens: Token[], eof: Token, warnings: ParseError[]} {
 	let pos = 0;
 	let row = 0;
 	let column = 0;
 	let tokens: Token[] = [];
+	let warnings: ParseError[] = [];
 	while (true) {
 		let text = "";
 
@@ -209,9 +211,15 @@ export function tokenize(source: string, file: string = ""): {tokens: Token[], e
 			text += char;
 			advance();
 		}
-		tokens.push(new Token(text, startRow, startColumn, file));
+
+		let token = new Token(text, startRow, startColumn, file);
+		if (pos == source.length) {
+			warnings.push(new ParseError("Ignored Token (need whitespace before EOF)", token));
+		} else {
+			tokens.push(token);
+		}
 	}
-	return {tokens, eof: new Token("", row, column, file)};
+	return {tokens, eof: new Token("", row, column, file), warnings};
 
 	function advance() {
 		if (source[pos] == "\n") {

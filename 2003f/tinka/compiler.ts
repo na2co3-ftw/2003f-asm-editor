@@ -15,17 +15,21 @@ const NEGATE_COMPARE: {[compare: string]: Compare} = {
 };
 
 export function fullCompile(str: string, file: string = ""): CompileResult {
-	const {tokens, eof} = tokenize(str.replace(/\r\n?/g, "\n"), file);
-	const {root, errors, warnings} = new TinkaParser(tokens, eof).parse();
-	if (root == null) {
-		return {data: null, errors, warnings};
+	const tokenized = tokenize(str.replace(/\r\n?/g, "\n"), file);
+	const parsed = new TinkaParser(tokenized.tokens, tokenized.eof).parse();
+	if (parsed.root == null) {
+		return {
+			data: null,
+			errors: parsed.errors,
+			warnings: tokenized.warnings.concat(parsed.warnings)
+		};
 	}
 
-	const compiled = compile(root, file);
+	const compiled = compile(parsed.root, file);
 	return {
 		data: compiled.data,
-		errors: errors.concat(compiled.errors),
-		warnings: warnings.concat(compiled.warnings)
+		errors: parsed.errors.concat(compiled.errors),
+		warnings: tokenized.warnings.concat(parsed.warnings, compiled.warnings)
 	};
 }
 
