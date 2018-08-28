@@ -31,7 +31,7 @@ export interface WritableValue extends Value {
 
 export namespace Value {
 	export class Reg implements WritableValue {
-		constructor(private r: Register) {}
+		constructor(public readonly r: Register) {}
 
 		getValue(hw: Hardware): number {
 			return hw.cpu.getRegister(this.r);
@@ -46,7 +46,7 @@ export namespace Value {
 	}
 
 	export class IndReg implements WritableValue {
-		constructor(private r: Register) {}
+		constructor(public readonly r: Register) {}
 
 		getValue(hw: Hardware): number {
 			return hw.memory.read(hw.cpu.getRegister(this.r));
@@ -61,9 +61,9 @@ export namespace Value {
 	}
 
 	export class IndRegDisp implements WritableValue {
-		private offset: number;
+		public readonly offset: number;
 
-		constructor(private r: Register, offset: number) {
+		constructor(public readonly r: Register, offset: number) {
 			this.offset = offset | 0;
 		}
 
@@ -82,7 +82,7 @@ export namespace Value {
 	}
 
 	export class IndRegReg implements WritableValue {
-		constructor(private r1: Register, private r2: Register) {}
+		constructor(public readonly r1: Register, public readonly r2: Register) {}
 
 		getValue(hw: Hardware): number {
 			const address = (hw.cpu.getRegister(this.r1) + hw.cpu.getRegister(this.r2)) | 0;
@@ -99,7 +99,7 @@ export namespace Value {
 	}
 
 	export class Imm implements Value {
-		public value: number;
+		public readonly value: number;
 
 		constructor(value: number) {
 			this.value = value | 0;
@@ -115,7 +115,7 @@ export namespace Value {
 	}
 
 	export class Label implements Value {
-		constructor(private label: string) {}
+		constructor(public readonly label: string) {}
 
 		getValue(hw: Hardware): number {
 			if (hw.program == null) {

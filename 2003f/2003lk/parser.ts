@@ -168,6 +168,9 @@ export class AsmParser extends Parser<AsmModule> {
 				dstl = this.parseWritableOperand();
 				dsth = this.parseWritableOperand();
 			}
+			if (operandDepends(dstl, dsth)) {
+				this.warning("Undefined behavior", token); // TODO: show warning at operand dstl
+			}
 			this.builder.triOp(token.text, src, dstl, dsth);
 		} else if (token.text == "fi") {
 			this.builder.fi(this.parseOperand(), this.parseOperand(), this.parseCompare());
@@ -181,6 +184,9 @@ export class AsmParser extends Parser<AsmModule> {
 				a = this.parseOperand();
 				b = this.parseWritableOperand();
 				c = this.parseWritableOperand();
+			}
+			if (operandDepends(c, b)) {
+				this.warning("Undefined behavior", token); // TODO: show warning at operand c
 			}
 			this.builder.inj(a, b, c);
 		} else {
@@ -362,4 +368,20 @@ export class AsmParser extends Parser<AsmModule> {
 			this.warning(`'${label}' is defined but not used`, token);
 		}
 	}
+}
+
+function operandDepends(mem: Value, reg: Value): boolean {
+	if (!(reg instanceof Value.Reg)) {
+		return false;
+	}
+	if (mem instanceof Value.IndReg) {
+		return mem.r == reg.r;
+	}
+	if (mem instanceof Value.IndRegDisp) {
+		return mem.r == reg.r;
+	}
+	if (mem instanceof Value.IndRegReg) {
+		return mem.r1 == reg.r || mem.r2 == reg.r;
+	}
+	return false;
 }
