@@ -95,7 +95,10 @@ export class AsmParser extends Parser<AsmModule> {
 	protected builder: AsmBuilder;
 	private isCI = false;
 	protected explicitSpecifiedOrder = false;
+	private previousInstToken: Token | null = null;
+	private previousDirectiveToken: Token | null = null;
 	private afterFi = false;
+	private afterMalkrz = false;
 	private afterNll = false;
 	private afterInstruction = false;
 
@@ -143,11 +146,6 @@ export class AsmParser extends Parser<AsmModule> {
 		} else if (token.text == "nac") {
 			this.builder.nac(this.parseWritableOperand());
 		} else if (AsmBuilder.isBinOp(token.text)) {
-			if (token.text == "malkrz" || token.text == "malkRz") {
-				if (!this.afterFi) {
-					this.warning("'malkrz' should follow 'fi'", token);
-				}
-			}
 			let src, dst;
 			if (this.isCI) {
 				dst = this.parseWritableOperand();
@@ -197,7 +195,20 @@ export class AsmParser extends Parser<AsmModule> {
 			this.warning("Operand oder should specified before any instruction", token);
 			this.explicitSpecifiedOrder = true; // Show this warning only once
 		}
+		if (token.text == "malkrz" || token.text == "malkRz") {
+			if (!this.afterFi) {
+				this.warning("'malkrz' should follow 'fi'", token);
+			}
+			if (this.afterNll) {
+				this.warning("'malkrz' should not be labeled", this.previousDirectiveToken);
+			}
+		} else if (this.afterFi) {
+			this.warning("'fi' should be followed by 'malkrz'", this.previousInstToken);
+		}
+
+		this.previousInstToken = token;
 		this.afterFi = token.text == "fi";
+		this.afterMalkrz = token.text == "malkrz" || token.text == "malkRz";
 		this.afterNll = false;
 		this.afterInstruction = true;
 	}
@@ -227,6 +238,8 @@ export class AsmParser extends Parser<AsmModule> {
 				this.builder.l(label.text);
 				if (!this.afterInstruction) {
 					this.warning("l' should be directly preceded by an instruction", token);
+				} else if (this.afterMalkrz) {
+					this.warning("'malkrz' should not be labeled", token);
 				}
 			} catch (e) {
 				if (e instanceof BuilderError) {
@@ -249,8 +262,9 @@ export class AsmParser extends Parser<AsmModule> {
 		}
 
 		if (this.afterNll) {
-			this.warning("nll should be directly followed by an instruction", token);
+			this.warning("'nll' should be directly followed by an instruction", token);
 		}
+		this.previousDirectiveToken = token;
 		this.afterNll = token.text == "nll";
 		this.afterInstruction = false;
 		return true;
@@ -366,6 +380,10 @@ export class AsmParser extends Parser<AsmModule> {
 		}
 		for (const [label, token] of this.labelDefinitions.entries()) {
 			this.warning(`'${label}' is defined but not used`, token);
+		}
+
+		if (this.afterFi) {
+			this.warning("'fi' should be followed by 'malkrz'", this.previousInstToken);
 		}
 	}
 }
