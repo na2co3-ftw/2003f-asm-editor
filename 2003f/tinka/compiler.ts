@@ -256,7 +256,7 @@ function compile(parsed: {definitions: Definition[], hasMain: boolean}, name: st
 					warnings.push(new ParseError(`'${expr.name}' is not array`, expr.token));
 				}
 				const pos = convertExpr(expr.pos, argCount);
-				if (pos instanceof Value.Imm) {
+				if (pos.type == "Imm") {
 					return V.indRegDisp("f5", (offset + pos.value) * 4);
 				} else {
 					builder.krz(pos, V.f1);

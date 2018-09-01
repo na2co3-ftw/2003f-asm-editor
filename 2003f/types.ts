@@ -1,5 +1,6 @@
 import {Hardware} from "./execute";
 import {BigInt} from "./bigint";
+import {getOperandText} from "./disasseble";
 
 export class Token {
 	constructor(
@@ -20,117 +21,41 @@ export function isRegister(reg: string): reg is Register {
 }
 
 
-export interface Value {
-	getValue(hw: Hardware): number;
-	toString(): string;
-}
+export type WritableValue = Value.Reg | Value.IndReg | Value.IndRegDisp | Value.IndRegReg;
 
-export interface WritableValue extends Value {
-	setValue(hw: Hardware, value: number): void;
-}
+export type Value = WritableValue | Value.Imm | Value.Label;
 
 export namespace Value {
-	export class Reg implements WritableValue {
-		constructor(public readonly r: Register) {}
-
-		getValue(hw: Hardware): number {
-			return hw.cpu.getRegister(this.r);
-		}
-		setValue(hw: Hardware, value: number) {
-			hw.cpu.setRegister(this.r, value);
-		}
-
-		toString(): string {
-			return this.r;
-		}
+	export interface Reg {
+		type: "Reg";
+		reg: Register;
 	}
 
-	export class IndReg implements WritableValue {
-		constructor(public readonly r: Register) {}
-
-		getValue(hw: Hardware): number {
-			return hw.memory.read(hw.cpu.getRegister(this.r));
-		}
-		setValue(hw: Hardware, value: number) {
-			hw.memory.write(hw.cpu.getRegister(this.r), value);
-		}
-
-		toString(): string {
-			return this.r + "@";
-		}
+	export interface IndReg {
+		type: "IndReg";
+		reg: Register;
 	}
 
-	export class IndRegDisp implements WritableValue {
-		public readonly offset: number;
-
-		constructor(public readonly r: Register, offset: number) {
-			this.offset = offset | 0;
-		}
-
-		getValue(hw: Hardware): number {
-			const address = (hw.cpu.getRegister(this.r) + this.offset) | 0;
-			return hw.memory.read(address);
-		}
-		setValue(hw: Hardware, value: number) {
-			const address = (hw.cpu.getRegister(this.r) + this.offset) | 0;
-			hw.memory.write(address, value);
-		}
-
-		toString(): string {
-			return `${this.r}+${this.offset}@`;
-		}
+	export interface IndRegDisp {
+		type: "IndRegDisp";
+		reg: Register;
+		offset: number;
 	}
 
-	export class IndRegReg implements WritableValue {
-		constructor(public readonly r1: Register, public readonly r2: Register) {}
-
-		getValue(hw: Hardware): number {
-			const address = (hw.cpu.getRegister(this.r1) + hw.cpu.getRegister(this.r2)) | 0;
-			return hw.memory.read(address);
-		}
-		setValue(hw: Hardware, value: number) {
-			const address = (hw.cpu.getRegister(this.r1) + hw.cpu.getRegister(this.r2)) | 0;
-			hw.memory.write(address, value);
-		}
-
-		toString(): string {
-			return `${this.r1}+${this.r2}@`;
-		}
+	export interface IndRegReg {
+		type: "IndRegReg";
+		reg1: Register;
+		reg2: Register;
 	}
 
-	export class Imm implements Value {
-		public readonly value: number;
-
-		constructor(value: number) {
-			this.value = value | 0;
-		}
-
-		getValue(hw: Hardware): number {
-			return this.value;
-		}
-
-		toString(): string {
-			return this.value.toString();
-		}
+	export interface Imm {
+		type: "Imm";
+		value: number;
 	}
 
-	export class Label implements Value {
-		constructor(public readonly label: string) {}
-
-		getValue(hw: Hardware): number {
-			if (hw.program == null) {
-				throw new RuntimeError(`Undefined label '${this.label}'`);
-			}
-			const address = hw.program.resolveLabel(hw.cpu.nx, this.label);
-			if (address == null) {
-				throw new RuntimeError(`Undefined label '${this.label}'`);
-			}
-			return address;
-		}
-
-		toString(): string {
-			return this.label;
-		}
+	export interface Label {
+		type: "Label";
+		label: string;
 	}
 }
 
@@ -145,13 +70,13 @@ export namespace Instruction {
 		constructor(private src: Value, private dst: WritableValue) {}
 
 		exec(hw: Hardware) {
-			this.dst.setValue(hw, this.compute(this.dst.getValue(hw), this.src.getValue(hw), hw));
+			hw.setValue(this.dst, this.compute(hw.getValue(this.dst), hw.getValue(this.src), hw));
 		}
 
 		protected abstract compute(a: number, b: number, hw:Hardware): number;
 
 		toString(): string {
-			return `${this.getName()} ${this.src} ${this.dst}`;
+			return `${this.getName()} ${getOperandText(this.src)} ${getOperandText(this.dst)}`;
 		}
 
 		protected abstract getName(): string;
@@ -222,11 +147,11 @@ export namespace Instruction {
 		) {}
 
 		exec(hw: Hardware) {
-			this.dst.setValue(hw, ~this.dst.getValue(hw));
+			hw.setValue(this.dst, ~hw.getValue(this.dst));
 		}
 
 		toString(): string {
-			return `nac ${this.dst}`;
+			return `nac ${getOperandText(this.dst)}`;
 		}
 	}
 
@@ -238,15 +163,15 @@ export namespace Instruction {
 		) {}
 
 		exec(hw: Hardware) {
-			const a = BigInt.fromUInt32(this.src.getValue(hw));
-			const b = BigInt.fromUInt32(this.dstl.getValue(hw));
+			const a = BigInt.fromUInt32(hw.getValue(this.src));
+			const b = BigInt.fromUInt32(hw.getValue(this.dstl));
 			const dst = a.times(b).toInt32Array(2);
-			this.dsth.setValue(hw, typeof dst[1] != "undefined" ? dst[1] : 0);
-			this.dstl.setValue(hw, typeof dst[0] != "undefined" ? dst[0] : 0);
+			hw.setValue(this.dsth, typeof dst[1] != "undefined" ? dst[1] : 0);
+			hw.setValue(this.dstl, typeof dst[0] != "undefined" ? dst[0] : 0);
 		}
 
 		toString(): string {
-			return `lat ${this.src} ${this.dstl} ${this.dsth}`;
+			return `lat ${getOperandText(this.src)} ${getOperandText(this.dstl)} ${getOperandText(this.dsth)}`;
 		}
 	}
 
@@ -258,15 +183,15 @@ export namespace Instruction {
 		) {}
 
 		exec(hw: Hardware) {
-			const a = BigInt.fromInt32(this.src.getValue(hw));
-			const b = BigInt.fromInt32(this.dstl.getValue(hw));
+			const a = BigInt.fromInt32(hw.getValue(this.src));
+			const b = BigInt.fromInt32(hw.getValue(this.dstl));
 			const dst = a.times(b).toInt32Array(2);
-			this.dsth.setValue(hw, typeof dst[1] != "undefined" ? dst[1] : 0);
-			this.dstl.setValue(hw, typeof dst[0] != "undefined" ? dst[0] : 0);
+			hw.setValue(this.dsth, typeof dst[1] != "undefined" ? dst[1] : 0);
+			hw.setValue(this.dstl, typeof dst[0] != "undefined" ? dst[0] : 0);
 		}
 
 		toString(): string {
-			return `latsna ${this.src} ${this.dstl} ${this.dsth}`;
+			return `latsna ${getOperandText(this.src)} ${getOperandText(this.dstl)} ${getOperandText(this.dsth)}`;
 		}
 	}
 
@@ -274,11 +199,11 @@ export namespace Instruction {
 		constructor(private src: Value, private dst: WritableValue) {}
 
 		exec(hw: Hardware) {
-			this.dst.setValue(hw, this.src.getValue(hw));
+			hw.setValue(this.dst, hw.getValue(this.src));
 		}
 
 		toString(): string {
-			return `krz ${this.src} ${this.dst}`;
+			return `krz ${getOperandText(this.src)} ${getOperandText(this.dst)}`;
 		}
 	}
 
@@ -300,13 +225,13 @@ export namespace Instruction {
 		) {}
 
 		exec(hw: Hardware) {
-			const a = this.a.getValue(hw);
-			const b = this.b.getValue(hw);
+			const a = hw.getValue(this.a);
+			const b = hw.getValue(this.b);
 			hw.cpu.flag = COMPARE_TO_FUNC[this.compare](a, b);
 		}
 
 		toString(): string {
-			return `fi ${this.a} ${this.b} ${this.compare}`;
+			return `fi ${getOperandText(this.a)} ${getOperandText(this.b)} ${this.compare}`;
 		}
 	}
 
@@ -318,14 +243,14 @@ export namespace Instruction {
 		) {}
 
 		exec(hw: Hardware) {
-			const a = this.a.getValue(hw);
-			const b = this.b.getValue(hw);
-			this.b.setValue(hw, a);
-			this.c.setValue(hw, b);
+			const a = hw.getValue(this.a);
+			const b = hw.getValue(this.b);
+			hw.setValue(this.b, a);
+			hw.setValue(this.c, b);
 		}
 
 		toString(): string {
-			return `fi ${this.a} ${this.b} ${this.c}`;
+			return `inj ${getOperandText(this.a)} ${getOperandText(this.b)} ${getOperandText(this.c)}`;
 		}
 	}
 

@@ -176,37 +176,57 @@ export class AsmBuilder {
 // Utilities for Value
 export namespace V {
 	export function reg(register: Register): Value.Reg {
-		return new Value.Reg(register);
+		return {
+			type: "Reg",
+			reg: register
+		};
 	}
 
 	export function imm(value: number): Value.Imm {
-		return new Value.Imm(value);
+		return {
+			type: "Imm",
+			value: value
+		};
 	}
 
 	export function label(label: string): Value.Label {
-		return new Value.Label(label);
+		return {
+			type: "Label",
+			label: label
+		};
 	}
 
 	export function indReg(register: Register): Value.IndReg {
-		return new Value.IndReg(register);
+		return {
+			type: "IndReg",
+			reg: register
+		};
 	}
 
 	export function indRegDisp(register: Register, disp: number): Value.IndRegDisp {
-		return new Value.IndRegDisp(register, disp);
+		return {
+			type: "IndRegDisp",
+			reg: register,
+			offset: disp
+		};
 	}
 
 	export function indRegReg(register1: Register, register2: Register): Value.IndRegReg {
-		return new Value.IndRegReg(register1, register2);
+		return {
+			type: "IndRegReg",
+			reg1: register1,
+			reg2: register2
+		};
 	}
 
-	export const f0 = new Value.Reg("f0");
-	export const f1 = new Value.Reg("f1");
-	export const f2 = new Value.Reg("f2");
-	export const f3 = new Value.Reg("f3");
-	export const f5 = new Value.Reg("f5");
-	export const xx = new Value.Reg("xx");
+	export const f0 = reg("f0");
+	export const f1 = reg("f1");
+	export const f2 = reg("f2");
+	export const f3 = reg("f3");
+	export const f5 = reg("f5");
+	export const xx = reg("xx");
 
-	export const f5io = new Value.IndReg("f5");
-	export const f5_4io = new Value.IndRegDisp("f5", 4);
-	export const f5_8io = new Value.IndRegDisp("f5", 8);
+	export const f5io = indReg("f5");
+	export const f5_4io = indRegDisp("f5", 4);
+	export const f5_8io = indRegDisp("f5", 8);
 }

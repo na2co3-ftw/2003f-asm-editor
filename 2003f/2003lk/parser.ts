@@ -389,17 +389,17 @@ export class AsmParser extends Parser<AsmModule> {
 }
 
 function operandDepends(mem: Value, reg: Value): boolean {
-	if (!(reg instanceof Value.Reg)) {
+	if (reg.type != "Reg") {
 		return false;
 	}
-	if (mem instanceof Value.IndReg) {
-		return mem.r == reg.r;
+	if (mem.type == "IndReg") {
+		return mem.reg == reg.reg;
 	}
-	if (mem instanceof Value.IndRegDisp) {
-		return mem.r == reg.r;
+	if (mem.type == "IndRegDisp") {
+		return mem.reg == reg.reg;
 	}
-	if (mem instanceof Value.IndRegReg) {
-		return mem.r1 == reg.r || mem.r2 == reg.r;
+	if (mem.type == "IndRegReg") {
+		return mem.reg1 == reg.reg || mem.reg2 == reg.reg;
 	}
 	return false;
 }

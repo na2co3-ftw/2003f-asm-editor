@@ -1,6 +1,7 @@
-import {Register, RuntimeError, Value} from "./types";
+import {Register, RuntimeError, Value, WritableValue} from "./types";
 import {Memory} from "./memory";
 import {initialAddress, Program} from "./linker";
+import {V} from "./builder";
 
 const initialF5 = 0x6d7aa0f8|0;
 const outermostRetAddress = 0xbda574b8|0;
@@ -90,7 +91,7 @@ export class Hardware {
 		if (breakNewStep && token) {
 			return ExecResult.BREAK;
 		}
-		
+
 		this.cpu.xx = next;
 		try {
 			instruction.exec(this);
@@ -107,12 +108,62 @@ export class Hardware {
 			this.finalize();
 			return ExecResult.END;
 		} else if (this.cpu.nx == debugOutputAddress) {
-			const value = new Value.IndRegDisp("f5", 4).getValue(this);
+			const value = this.getValue(V.f5_4io);
 			this.log.push((value >>> 0).toString());
-			this.cpu.xx = new Value.IndRegDisp("f5", 0).getValue(this);
+			this.cpu.xx = this.getValue(V.f5);
 			this.updateNX();
 		}
 		return ExecResult.CONTINUE;
+	}
+
+	getValue(operand: Value): number {
+		switch (operand.type) {
+			case "Reg":
+				return this.cpu.getRegister(operand.reg);
+			case "IndReg":
+				return this.memory.read(this.cpu.getRegister(operand.reg));
+			case "IndRegDisp": {
+				const address = (this.cpu.getRegister(operand.reg) + operand.offset) | 0;
+				return this.memory.read(address);
+			}
+			case "IndRegReg": {
+				const address = (this.cpu.getRegister(operand.reg1) + this.cpu.getRegister(operand.reg2)) | 0;
+				return this.memory.read(address);
+			}
+			case "Imm":
+				return operand.value;
+			case "Label": {
+				if (this.program == null) {
+					throw new RuntimeError(`Undefined label '${operand.label}'`);
+				}
+				const address = this.program.resolveLabel(this.cpu.nx, operand.label);
+				if (address == null) {
+					throw new RuntimeError(`Undefined label '${operand.label}'`);
+				}
+				return address;
+			}
+		}
+	}
+
+	setValue(operand: WritableValue, value: number) {
+		switch (operand.type) {
+			case "Reg":
+				this.cpu.setRegister(operand.reg, value);
+				return;
+			case "IndReg":
+				this.memory.write(this.cpu.getRegister(operand.reg), value);
+				return;
+			case "IndRegDisp": {
+				const address = (this.cpu.getRegister(operand.reg) + operand.offset) | 0;
+				this.memory.write(address, value);
+				return;
+			}
+			case "IndRegReg": {
+				const address = (this.cpu.getRegister(operand.reg1) + this.cpu.getRegister(operand.reg2)) | 0;
+				this.memory.write(address, value);
+				return;
+			}
+		}
 	}
 
 	finalize() {
