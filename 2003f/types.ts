@@ -1,6 +1,3 @@
-import {Hardware} from "./execute";
-import {BigInt} from "./bigint";
-import {getOperandText} from "./disasseble";
 
 export class Token {
 	constructor(
@@ -60,204 +57,70 @@ export namespace Value {
 }
 
 
-export interface Instruction {
-	exec(hw: Hardware): void;
-	toString(): string;
-}
+export type Instruction =
+	Instruction.BinaryInstruction |
+	Instruction.Nac |
+	Instruction.TernaryInstruction |
+	Instruction.Fi |
+	Instruction.Inj |
+	Instruction.Fen;
 
 export namespace Instruction {
-	abstract class BinaryInstruction implements Instruction {
-		constructor(private src: Value, private dst: WritableValue) {}
+	export type BinaryOpcode = "krz" | "malkrz" | "ata" | "nta" | "ada" | "ekc" | "dal" | "dto" | "dro" | "dtosna";
+	export const BINARY_OPCODES = ["krz", "malkrz", "ata", "nta", "ada", "ekc", "dal", "dto", "dro", "dtosna"];
+	export type TernaryOpcode = "lat" | "latsna";
+	export const TERNARY_OPCODES = ["lat", "latsna"];
 
-		exec(hw: Hardware) {
-			hw.setValue(this.dst, this.compute(hw.getValue(this.dst), hw.getValue(this.src), hw));
-		}
-
-		protected abstract compute(a: number, b: number, hw:Hardware): number;
-
-		toString(): string {
-			return `${this.getName()} ${getOperandText(this.src)} ${getOperandText(this.dst)}`;
-		}
-
-		protected abstract getName(): string;
+	export function isBinary(inst: Instruction): inst is BinaryInstruction {
+		return BINARY_OPCODES.indexOf(inst.opcode) >= 0;
 	}
 
-	export class Ata extends BinaryInstruction {
-		protected compute(a: number, b: number): number { return (a + b) | 0; }
-		protected getName(): string { return "ata"; }
+	export function isBinaryOpcode(opcode: string): opcode is BinaryOpcode {
+		return BINARY_OPCODES.indexOf(opcode) >= 0;
 	}
 
-	export class Nta extends BinaryInstruction {
-		protected compute(a: number, b: number): number { return (a - b) | 0; }
-		protected getName(): string { return "nta"; }
+	export function isTernary(inst: Instruction): inst is TernaryInstruction {
+		return TERNARY_OPCODES.indexOf(inst.opcode) >= 0;
 	}
 
-	export class Ada extends BinaryInstruction {
-		protected compute(a: number, b: number): number { return a & b; }
-		protected getName(): string { return "ada"; }
+	export function isTernaryOpcode(opcode: string): opcode is TernaryOpcode {
+		return TERNARY_OPCODES.indexOf(opcode) >= 0;
 	}
 
-	export class Ekc extends BinaryInstruction {
-		protected compute(a: number, b: number): number { return a | b; }
-		protected getName(): string { return "ekc"; }
+	export interface BinaryInstruction {
+		opcode: BinaryOpcode
+		src: Value;
+		dst: WritableValue;
 	}
 
-	export class Dal extends BinaryInstruction {
-		protected compute(a: number, b: number): number { return ~(a ^ b); }
-		protected getName(): string { return "dal"; }
+	export interface Nac {
+		opcode: "nac";
+		dst: WritableValue;
 	}
 
-	export class Dto extends BinaryInstruction {
-		protected compute(a: number, b: number, hw: Hardware): number {
-			if ((b & 0xffffffc0) != 0) {
-				hw.warning(`Shift amount ${b} is larger than 63`);
-			}
-			return (b & 0xffffffe0) == 0 ? (a >>> b) | 0 : 0;
-		}
-		protected getName(): string { return "dto"; }
+	export interface TernaryInstruction {
+		opcode: TernaryOpcode;
+		src: Value;
+		dstl: WritableValue;
+		dsth: WritableValue;
 	}
 
-	export class Dro extends BinaryInstruction {
-		protected compute(a: number, b: number, hw: Hardware): number {
-			if ((b & 0xffffffc0) != 0) {
-				hw.warning(`Shift amount ${b} is larger than 63`);
-			}
-			return (b & 0xffffffe0) == 0 ? a << b : 0;
-		}
-		protected getName(): string { return "dro"; }
+	export interface Fi {
+		opcode: "fi";
+		a: Value;
+		b: Value;
+		compare: Compare;
 	}
 
-	export class Dtosna extends BinaryInstruction {
-		protected compute(a: number, b: number, hw: Hardware): number {
-			if ((b & 0xffffffc0) != 0) {
-				hw.warning(`Shift amount ${b} is larger than 63`);
-			}
-			if ((b & 0xffffffe0) == 0) {
-				return a >> b;
-			} else {
-				return (a & 0x80000000) == 0 ? 0 : -1;
-			}
-		}
-		protected getName(): string { return "dtosna"; }
+	export interface Inj {
+		opcode: "inj";
+		a: Value;
+		b: WritableValue;
+		c: WritableValue;
 	}
 
-	export class Nac implements Instruction {
-		constructor(
-			private dst: WritableValue
-		) {}
-
-		exec(hw: Hardware) {
-			hw.setValue(this.dst, ~hw.getValue(this.dst));
-		}
-
-		toString(): string {
-			return `nac ${getOperandText(this.dst)}`;
-		}
-	}
-
-	export class Lat implements Instruction {
-		constructor(
-			private src: Value,
-			private dstl: WritableValue,
-			private dsth: WritableValue
-		) {}
-
-		exec(hw: Hardware) {
-			const a = BigInt.fromUInt32(hw.getValue(this.src));
-			const b = BigInt.fromUInt32(hw.getValue(this.dstl));
-			const dst = a.times(b).toInt32Array(2);
-			hw.setValue(this.dsth, typeof dst[1] != "undefined" ? dst[1] : 0);
-			hw.setValue(this.dstl, typeof dst[0] != "undefined" ? dst[0] : 0);
-		}
-
-		toString(): string {
-			return `lat ${getOperandText(this.src)} ${getOperandText(this.dstl)} ${getOperandText(this.dsth)}`;
-		}
-	}
-
-	export class Latsna implements Instruction {
-		constructor(
-			private src: Value,
-			private dstl: WritableValue,
-			private dsth: WritableValue
-		) {}
-
-		exec(hw: Hardware) {
-			const a = BigInt.fromInt32(hw.getValue(this.src));
-			const b = BigInt.fromInt32(hw.getValue(this.dstl));
-			const dst = a.times(b).toInt32Array(2);
-			hw.setValue(this.dsth, typeof dst[1] != "undefined" ? dst[1] : 0);
-			hw.setValue(this.dstl, typeof dst[0] != "undefined" ? dst[0] : 0);
-		}
-
-		toString(): string {
-			return `latsna ${getOperandText(this.src)} ${getOperandText(this.dstl)} ${getOperandText(this.dsth)}`;
-		}
-	}
-
-	export class Krz implements  Instruction {
-		constructor(private src: Value, private dst: WritableValue) {}
-
-		exec(hw: Hardware) {
-			hw.setValue(this.dst, hw.getValue(this.src));
-		}
-
-		toString(): string {
-			return `krz ${getOperandText(this.src)} ${getOperandText(this.dst)}`;
-		}
-	}
-
-	export class MalKrz extends Krz {
-		exec(hw: Hardware) {
-			if (hw.cpu.flag) super.exec(hw);
-		}
-
-		toString(): string {
-			return "mal" + super.toString();
-		}
-	}
-
-	export class Fi implements  Instruction {
-		constructor(
-			private a: Value,
-			private b: Value,
-			private compare: Compare
-		) {}
-
-		exec(hw: Hardware) {
-			const a = hw.getValue(this.a);
-			const b = hw.getValue(this.b);
-			hw.cpu.flag = COMPARE_TO_FUNC[this.compare](a, b);
-		}
-
-		toString(): string {
-			return `fi ${getOperandText(this.a)} ${getOperandText(this.b)} ${this.compare}`;
-		}
-	}
-
-	export class Inj implements  Instruction {
-		constructor(
-			private a: Value,
-			private b: WritableValue,
-			private c: WritableValue
-		) {}
-
-		exec(hw: Hardware) {
-			const a = hw.getValue(this.a);
-			const b = hw.getValue(this.b);
-			hw.setValue(this.b, a);
-			hw.setValue(this.c, b);
-		}
-
-		toString(): string {
-			return `inj ${getOperandText(this.a)} ${getOperandText(this.b)} ${getOperandText(this.c)}`;
-		}
-	}
-
-	export class Fen implements Instruction {
-		constructor() {}
-		exec(hw: Hardware) {}
-		toString(): string { return `fen`; }
+	export interface Fen {
+		opcode: "fen";
 	}
 }
 
@@ -274,19 +137,6 @@ export const COMPARES = [
 export function isCompare(compare: string): compare is Compare {
 	return COMPARES.indexOf(compare) >= 0;
 }
-
-const COMPARE_TO_FUNC: {[compare: string]: (a: number, b:number) => boolean} = {
-	xtlo: (a, b) => a <= b,
-	xylo: (a, b) => a < b,
-	clo: (a, b) => a == b,
-	xolo: (a, b) => a >= b,
-	llo: (a, b) => a > b,
-	niv: (a, b) => a != b,
-	xtlonys: (a, b) => (a >>> 0) <= (b >>> 0),
-	xylonys: (a, b) => (a >>> 0) < (b >>> 0),
-	xolonys: (a, b) => (a >>> 0) >= (b >>> 0),
-	llonys: (a, b) => (a >>> 0) > (b >>> 0),
-};
 
 
 export type LabeledInstruction = {

@@ -1,4 +1,4 @@
-import {AsmModule, Value} from "./types";
+import {AsmModule, Instruction, Value} from "./types";
 
 export function disassemble(module: AsmModule): string {
 	let ret =  "'i'c\n";
@@ -12,7 +12,7 @@ export function disassemble(module: AsmModule): string {
 	}
 
 	for (const {instruction, labels} of module.instructions) {
-		ret += instruction.toString();
+		ret += getInstText(instruction);
 		for (const label of labels) {
 			ret += ` l' ${label}`;
 		}
@@ -22,7 +22,27 @@ export function disassemble(module: AsmModule): string {
 	return ret;
 }
 
-export function getOperandText(operand: Value): string {
+function getInstText(inst: Instruction): string {
+	if (Instruction.isBinary(inst)) {
+		return `${inst.opcode} ${getOp(inst.src)} ${getOp(inst.dst)}`;
+	}
+	if (Instruction.isTernary(inst)) {
+		return `${inst.opcode} ${getOp(inst.src)} ${getOp(inst.dstl)} ${getOp(inst.dsth)}`;
+	}
+
+	switch (inst.opcode) {
+		case "nac":
+			return `nac ${getOp(inst.dst)}`;
+		case "fi":
+			return `fi ${getOp(inst.a)} ${getOp(inst.b)} ${inst.compare}`;
+		case "inj":
+			return `inj ${getOp(inst.a)} ${getOp(inst.b)} ${getOp(inst.c)}`;
+		case "fen":
+			return "fen";
+	}
+}
+
+function getOp(operand: Value): string {
 	switch (operand.type) {
 		case "Reg":
 			return operand.reg;

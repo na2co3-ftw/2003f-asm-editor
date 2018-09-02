@@ -1,11 +1,58 @@
-import {Register, RuntimeError, Value, WritableValue} from "./types";
+import {Instruction, Register, RuntimeError, Value, WritableValue} from "./types";
 import {Memory} from "./memory";
 import {initialAddress, Program} from "./linker";
 import {V} from "./builder";
+import {BigInt} from "./bigint";
 
 const initialF5 = 0x6d7aa0f8|0;
 const outermostRetAddress = 0xbda574b8|0;
 const debugOutputAddress = 0xba5fb6b0|0;
+
+const COMPARE_TO_FUNC: { [compare: string]: (a: number, b: number) => boolean } = {
+	xtlo: (a, b) => a <= b,
+	xylo: (a, b) => a < b,
+	clo: (a, b) => a == b,
+	xolo: (a, b) => a >= b,
+	llo: (a, b) => a > b,
+	niv: (a, b) => a != b,
+	xtlonys: (a, b) => (a >>> 0) <= (b >>> 0),
+	xylonys: (a, b) => (a >>> 0) < (b >>> 0),
+	xolonys: (a, b) => (a >>> 0) >= (b >>> 0),
+	llonys: (a, b) => (a >>> 0) > (b >>> 0),
+};
+
+const BININST_TO_FUNC: { [opcode: string]: (a: number, b: number, hw: Hardware) => number } = {
+	ata: (a, b) => (a + b) | 0,
+	nta: (a, b) => (a - b) | 0,
+	ada: (a, b) => a & b,
+	ekc: (a, b) => a | b,
+	dal: (a, b) => ~(a ^ b),
+
+	dto(a, b, hw) {
+		if ((b & 0xffffffc0) != 0) {
+			hw.warning(`Shift amount ${b} is larger than 63`);
+		}
+		return (b & 0xffffffe0) == 0 ? (a >>> b) | 0 : 0;
+	},
+
+	dro(a, b, hw) {
+		if ((b & 0xffffffc0) != 0) {
+			hw.warning(`Shift amount ${b} is larger than 63`);
+		}
+		return (b & 0xffffffe0) == 0 ? a << b : 0;
+	},
+
+	dtosna(a, b, hw) {
+		if ((b & 0xffffffc0) != 0) {
+			hw.warning(`Shift amount ${b} is larger than 63`);
+		}
+		if ((b & 0xffffffe0) == 0) {
+			return a >> b;
+		} else {
+			return (a & 0x80000000) == 0 ? 0 : -1;
+		}
+	}
+};
 
 export class CPU {
 	f0: number = 0x82ebfc85|0; // garbage
@@ -94,7 +141,7 @@ export class Hardware {
 
 		this.cpu.xx = next;
 		try {
-			instruction.exec(this);
+			this.execInstruction(instruction);
 		} catch (e) {
 			if (e instanceof RuntimeError) {
 				this.errors.push(e);
@@ -116,7 +163,64 @@ export class Hardware {
 		return ExecResult.CONTINUE;
 	}
 
-	getValue(operand: Value): number {
+	private execInstruction(inst: Instruction) {
+		if (Instruction.isBinary(inst)) {
+			if (inst.opcode == "krz") {
+				this.setValue(inst.dst, this.getValue(inst.src));
+				return;
+			}
+			if (inst.opcode == "malkrz") {
+				if (this.cpu.flag) {
+					this.setValue(inst.dst, this.getValue(inst.src));
+				}
+				return;
+			}
+
+			const a = this.getValue(inst.dst);
+			const b = this.getValue(inst.src);
+			this.setValue(inst.dst, BININST_TO_FUNC[inst.opcode](a, b, this));
+			return;
+		}
+
+		switch (inst.opcode) {
+			case "nac":
+				this.setValue(inst.dst, ~this.getValue(inst.dst));
+				return;
+			case "lat": {
+				const a = BigInt.fromUInt32(this.getValue(inst.src));
+				const b = BigInt.fromUInt32(this.getValue(inst.dstl));
+				const dst = a.times(b).toInt32Array(2);
+				this.setValue(inst.dsth, typeof dst[1] != "undefined" ? dst[1] : 0);
+				this.setValue(inst.dstl, typeof dst[0] != "undefined" ? dst[0] : 0);
+				return;
+			}
+			case "latsna": {
+				const a = BigInt.fromInt32(this.getValue(inst.src));
+				const b = BigInt.fromInt32(this.getValue(inst.dstl));
+				const dst = a.times(b).toInt32Array(2);
+				this.setValue(inst.dsth, typeof dst[1] != "undefined" ? dst[1] : 0);
+				this.setValue(inst.dstl, typeof dst[0] != "undefined" ? dst[0] : 0);
+				return;
+			}
+			case "fi": {
+				const a = this.getValue(inst.a);
+				const b = this.getValue(inst.b);
+				this.cpu.flag = COMPARE_TO_FUNC[inst.compare](a, b);
+				return;
+			}
+			case "inj": {
+				const a = this.getValue(inst.a);
+				const b = this.getValue(inst.b);
+				this.setValue(inst.b, a);
+				this.setValue(inst.c, b);
+				return;
+			}
+			case "fen":
+				return;
+		}
+	}
+
+	private getValue(operand: Value): number {
 		switch (operand.type) {
 			case "Reg":
 				return this.cpu.getRegister(operand.reg);
@@ -145,7 +249,7 @@ export class Hardware {
 		}
 	}
 
-	setValue(operand: WritableValue, value: number) {
+	private setValue(operand: WritableValue, value: number) {
 		switch (operand.type) {
 			case "Reg":
 				this.cpu.setRegister(operand.reg, value);

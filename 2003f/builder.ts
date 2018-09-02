@@ -7,30 +7,15 @@ export class BuilderError {
 	constructor(public message: string) {}
 }
 
-const BINOP_INST: {[mnemonic: string]: {new(src: Value, dst: WritableValue): Instruction}} = {
-	"krz": Instruction.Krz,
-	"kRz": Instruction.Krz,
-	"ata": Instruction.Ata,
-	"nta": Instruction.Nta,
-	"ada": Instruction.Ada,
-	"ekc": Instruction.Ekc,
-	"dal": Instruction.Dal,
-	"dto": Instruction.Dto,
-	"dro": Instruction.Dro,
-	"dRo": Instruction.Dro,
-	"dtosna": Instruction.Dtosna,
-	"malkrz": Instruction.MalKrz,
-	"malkRz": Instruction.MalKrz
+const BINOP_ALIESES: { [mnemonic: string]: Instruction.BinaryOpcode } = {
+	"kRz": "krz",
+	"dRo": "dro",
+	"malkRz": "malkrz"
 };
 
-const TRIOP_INST: {[mnemonic: string]: {new(src: Value, dstl: WritableValue, dsth: WritableValue): Instruction}} = {
-	"lat": Instruction.Lat,
-	"latsna": Instruction.Latsna
-};
+export const BINARY_OPERATORS = [...Instruction.BINARY_OPCODES, ...Object.keys(BINOP_ALIESES)];
 
-export const BINARY_OPERATORS = Object.keys(BINOP_INST);
-
-export const TERNARY_OPERATORS = Object.keys(TRIOP_INST);
+export const TERNARY_OPERATORS = Instruction.TERNARY_OPCODES;
 
 export class AsmBuilder {
 	private instructions: LabeledInstruction[] = [];
@@ -64,74 +49,76 @@ export class AsmBuilder {
 		this.nextToken = null;
 	}
 
+	static isBinOp(mnemonic: string): boolean {
+		return Instruction.isBinaryOpcode(mnemonic) || !!BINOP_ALIESES[mnemonic];
+	}
+
+	static isTriOp(mnemonic: string): boolean {
+		return Instruction.isTernaryOpcode(mnemonic);
+	}
+
 	nac(dst: WritableValue) {
-		this.add(new Instruction.Nac(dst));
+		this.add({opcode: "nac", dst});
 	}
 
 	ata(src: Value, dst: WritableValue) {
-		this.add(new Instruction.Ata(src, dst));
+		this.add({opcode: "ata", src, dst});
 	}
+
 	nta(src: Value, dst: WritableValue) {
-		this.add(new Instruction.Nta(src, dst));
+		this.add({opcode: "nta", src, dst});
 	}
+
 	ada(src: Value, dst: WritableValue) {
-		this.add(new Instruction.Ada(src, dst));
+		this.add({opcode: "ada", src, dst});
 	}
+
 	ekc(src: Value, dst: WritableValue) {
-		this.add(new Instruction.Ekc(src, dst));
+		this.add({opcode: "ekc", src, dst});
 	}
+
 	dal(src: Value, dst: WritableValue) {
-		this.add(new Instruction.Dal(src, dst));
+		this.add({opcode: "dal", src, dst});
 	}
+
 	dto(src: Value, dst: WritableValue) {
-		this.add(new Instruction.Dto(src, dst));
+		this.add({opcode: "dto", src, dst});
 	}
+
 	dro(src: Value, dst: WritableValue) {
-		this.add(new Instruction.Dro(src, dst));
+		this.add({opcode: "dro", src, dst});
 	}
+
 	dtosna(src: Value, dst: WritableValue) {
-		this.add(new Instruction.Dtosna(src, dst));
+		this.add({opcode: "dtosna", src, dst});
 	}
+
 	krz(src: Value, dst: WritableValue) {
-		this.add(new Instruction.Krz(src, dst));
+		this.add({opcode: "krz", src, dst});
 	}
+
 	malkrz(src: Value, dst: WritableValue) {
-		this.add(new Instruction.MalKrz(src, dst));
+		this.add({opcode: "malkrz", src, dst});
 	}
 
 	lat(src: Value, dstl: WritableValue, dsth: WritableValue) {
-		this.add(new Instruction.Lat(src, dstl, dsth));
+		this.add({opcode: "lat", src, dstl, dsth});
 	}
+
 	latsna(src: Value, dstl: WritableValue, dsth: WritableValue) {
-		this.add(new Instruction.Latsna(src, dstl, dsth));
+		this.add({opcode: "latsna", src, dstl, dsth});
 	}
 
 	fi(a: Value, b: Value, compare: Compare) {
-		this.add(new Instruction.Fi(a, b, compare));
+		this.add({opcode: "fi", a, b, compare});
 	}
 
 	inj(a: Value, b: WritableValue, c: WritableValue) {
-		this.add(new Instruction.Inj(a, b, c));
+		this.add({opcode: "inj", a, b, c});
 	}
 
 	fen() {
-		this.add(new Instruction.Fen());
-	}
-
-	binOp(mnemonic: string, src: Value, dst: WritableValue) {
-		const Inst = BINOP_INST[mnemonic];
-		if (!Inst) {
-			throw new BuilderError(`'${mnemonic}' is not a binary operator`);
-		}
-		this.add(new Inst(src, dst));
-	}
-
-	triOp(mnemonic: string, src: Value, dstl: WritableValue, dsth: WritableValue) {
-		const Inst = TRIOP_INST[mnemonic];
-		if (!Inst) {
-			throw new BuilderError(`'${mnemonic}' is not a ternary operator`);
-		}
-		this.add(new Inst(src, dstl, dsth));
+		this.add({opcode: "fen"});
 	}
 
 	l(label: string) {
@@ -164,12 +151,24 @@ export class AsmBuilder {
 		this.hasMain = hasMain;
 	}
 
-	static isBinOp(mnemonic: string): boolean {
-		return !!BINOP_INST[mnemonic];
+	binOp(mnemonic: string, src: Value, dst: WritableValue) {
+		if (Instruction.isBinaryOpcode(mnemonic)) {
+			this.add({opcode: mnemonic, src, dst});
+			return;
+		}
+		const opcode = BINOP_ALIESES[mnemonic];
+		if (!opcode) {
+			throw new BuilderError(`'${mnemonic}' is not a binary operator`);
+		}
+		this.add({opcode, src, dst});
 	}
 
-	static isTriOp(mnemonic: string): boolean {
-		return !!TRIOP_INST[mnemonic];
+	triOp(mnemonic: string, src: Value, dstl: WritableValue, dsth: WritableValue) {
+		if (Instruction.isTernaryOpcode(mnemonic)) {
+			this.add({opcode: mnemonic, src, dstl, dsth});
+			return;
+		}
+		throw new BuilderError(`'${mnemonic}' is not a ternary operator`);
 	}
 }
 
