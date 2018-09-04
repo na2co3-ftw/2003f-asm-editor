@@ -25,20 +25,34 @@ export class Memory {
 			this.hw.warning(`Write memory by not aligned address ${address}`);
 		}
 		const [a, b, c, d] = decompose(value);
-		//console.log(`${address} <- ${value}`);
 		this.writeByte(address, a);
 		this.writeByte(address + 1, b);
 		this.writeByte(address + 2, c);
 		this.writeByte(address + 3, d);
-		const section = address >>> SECTION_SIZE;
-		if (this.usingSections.indexOf(section) < 0) {
-			this.usingSections.push(section);
-			this.usingSections.sort((a, b) => a - b);
-		}
+		this.useMemory(address, 4);
 	}
 
-	writeByte(address: number, value: number) {
-		this.data[address] = value;
+	write16(address: number, value: number) {
+		if ((address & 0x1) != 0) {
+			this.hw.warning(`Write memory by not aligned address ${address}`);
+		}
+		this.writeByte(address, (value >> 8) & 0xff);
+		this.writeByte(address + 1, value & 0xff);
+		this.useMemory(address, 2);
+	}
+
+	write8(address: number, value: number) {
+		this.writeByte(address, value & 0xff);
+		this.useMemory(address, 1);
+	}
+
+	read16(address: number): number {
+		if ((address & 0x1) != 0) {
+			this.hw.warning(`Read memory by not aligned address ${address}`);
+		}
+		const a = this.readByte(address);
+		const b = this.readByte(address + 1);
+		return ((a << 24) >> 16) + b;
 	}
 
 	read(address: number): number {
@@ -49,17 +63,41 @@ export class Memory {
 		const b = this.readByte(address + 1);
 		const c = this.readByte(address + 2);
 		const d = this.readByte(address + 3);
-		//console.log(`${address} -> ${compose(a, b, c, d)}`);
 		return compose(a, b, c, d);
 	}
 
-	readByte(address: number): number {
+	read8(address: number): number {
+		return (this.readByte(address) << 24) >> 24;
+	}
+
+	private writeByte(address: number, value: number) {
+		this.data[address] = value;
+	}
+
+	private readByte(address: number): number {
 		if (this.data.hasOwnProperty(address)) {
 			return this.data[address];
 		}
 		const value = Math.floor(Math.random() * 0x100);
 		this.hw.warning("Read undefined memory");
 		this.writeByte(address, value);
+		this.useMemory(address, 1);
 		return value;
+	}
+
+	private useMemory(address: number, size: number) {
+		const section = address >>> SECTION_SIZE;
+		if (this.usingSections.indexOf(section) < 0) {
+			this.usingSections.push(section);
+			this.usingSections.sort((a, b) => a - b);
+		}
+
+		const endSection = (address + size - 1) >> SECTION_SIZE;
+		if (section != endSection) {
+			if (this.usingSections.indexOf(endSection) < 0) {
+				this.usingSections.push(endSection);
+				this.usingSections.sort((a, b) => a - b);
+			}
+		}
 	}
 }

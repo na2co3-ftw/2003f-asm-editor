@@ -66,8 +66,15 @@ export type Instruction =
 	Instruction.Fen;
 
 export namespace Instruction {
-	export type BinaryOpcode = "krz" | "malkrz" | "ata" | "nta" | "ada" | "ekc" | "dal" | "dto" | "dro" | "dtosna";
-	export const BINARY_OPCODES = ["krz", "malkrz", "ata", "nta", "ada", "ekc", "dal", "dto", "dro", "dtosna"];
+	export type BinaryOpcode =
+		"krz" | "malkrz" | "krz8i" | "krz8c" | "krz16i" | "krz16c" |
+		"ata" | "nta" | "ada" | "ekc" | "dal" |
+		"dto" | "dro" | "dtosna";
+	export const BINARY_OPCODES = [
+		"krz", "malkrz", "krz8i", "krz8c", "krz16i", "krz16c",
+		"ata", "nta", "ada", "ekc", "dal",
+		"dto", "dro", "dtosna"
+	];
 	export type TernaryOpcode = "lat" | "latsna";
 	export const TERNARY_OPCODES = ["lat", "latsna"];
 

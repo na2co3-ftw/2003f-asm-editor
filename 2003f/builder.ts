@@ -9,6 +9,10 @@ export class BuilderError {
 
 const BINOP_ALIESES: { [mnemonic: string]: Instruction.BinaryOpcode } = {
 	"kRz": "krz",
+	"kRz8i": "krz8i",
+	"kRz8c": "krz8c",
+	"kRz16i": "krz16i",
+	"kRz16c": "krz16c",
 	"dRo": "dro",
 	"malkRz": "malkrz"
 };
@@ -99,6 +103,22 @@ export class AsmBuilder {
 
 	malkrz(src: Value, dst: WritableValue) {
 		this.add({opcode: "malkrz", src, dst});
+	}
+
+	krz8i(src: Value, dst: WritableValue) {
+		this.add({opcode: "krz8i", src, dst});
+	}
+
+	krz8c(src: Value, dst: WritableValue) {
+		this.add({opcode: "krz8c", src, dst});
+	}
+
+	krz16i(src: Value, dst: WritableValue) {
+		this.add({opcode: "krz16i", src, dst});
+	}
+
+	krz16c(src: Value, dst: WritableValue) {
+		this.add({opcode: "krz16c", src, dst});
 	}
 
 	lat(src: Value, dstl: WritableValue, dsth: WritableValue) {
