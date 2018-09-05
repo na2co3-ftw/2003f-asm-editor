@@ -314,7 +314,7 @@ export class Hardware {
 	private setValue8(operand: WritableValue, value: number) {
 		switch (operand.type) {
 			case "Reg":
-				this.cpu.setRegister(operand.reg, (this.cpu.getRegister(operand.reg) & 0xffffff00) | (value & 0xff));
+				this.cpu.setRegister(operand.reg, (this.cpu.getRegister(operand.reg) & 0x00ffffff) | ((value & 0xff) << 24));
 				return;
 			case "IndReg":
 				this.memory.write8(this.cpu.getRegister(operand.reg), value);
@@ -364,7 +364,7 @@ export class Hardware {
 	private setValue16(operand: WritableValue, value: number) {
 		switch (operand.type) {
 			case "Reg":
-				this.cpu.setRegister(operand.reg, (this.cpu.getRegister(operand.reg) & 0xffff0000) | (value & 0xffff));
+				this.cpu.setRegister(operand.reg, (this.cpu.getRegister(operand.reg) & 0x0000ffff) | ((value & 0xffff) << 16));
 				return;
 			case "IndReg":
 				this.memory.write16(this.cpu.getRegister(operand.reg), value);
