@@ -285,7 +285,7 @@ export class Hardware {
 	private getValue8(operand: Value): number {
 		switch (operand.type) {
 			case "Reg":
-				return (this.cpu.getRegister(operand.reg) << 24) >> 24;
+				return this.cpu.getRegister(operand.reg) >> 24;
 			case "IndReg":
 				return this.memory.read8(this.cpu.getRegister(operand.reg));
 			case "IndRegDisp": {
@@ -297,7 +297,7 @@ export class Hardware {
 				return this.memory.read8(address);
 			}
 			case "Imm":
-				return (operand.value << 24) >> 24;
+				return operand.value >> 24;
 			case "Label": {
 				if (this.program == null) {
 					throw new RuntimeError(`Undefined label '${operand.label}'`);
@@ -306,7 +306,7 @@ export class Hardware {
 				if (address == null) {
 					throw new RuntimeError(`Undefined label '${operand.label}'`);
 				}
-				return (address << 24) >> 24;
+				return address >> 24;
 			}
 		}
 	}
@@ -335,7 +335,7 @@ export class Hardware {
 	private getValue16(operand: Value): number {
 		switch (operand.type) {
 			case "Reg":
-				return (this.cpu.getRegister(operand.reg) << 16) >> 16;
+				return this.cpu.getRegister(operand.reg) >> 16;
 			case "IndReg":
 				return this.memory.read16(this.cpu.getRegister(operand.reg));
 			case "IndRegDisp": {
@@ -347,7 +347,7 @@ export class Hardware {
 				return this.memory.read16(address);
 			}
 			case "Imm":
-				return (operand.value << 16) >> 16;
+				return operand.value >> 16;
 			case "Label": {
 				if (this.program == null) {
 					throw new RuntimeError(`Undefined label '${operand.label}'`);
@@ -356,7 +356,7 @@ export class Hardware {
 				if (address == null) {
 					throw new RuntimeError(`Undefined label '${operand.label}'`);
 				}
-				return (address << 16) >> 16;
+				return address >> 16;
 			}
 		}
 	}
