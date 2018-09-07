@@ -4,6 +4,7 @@ import {
 } from "../types";
 import {BINARY_OPERATORS, TERNARY_OPERATORS, V} from "../builder";
 import {AsmParser, isValidLabel} from "../2003lk/parser";
+import {parseInt32} from "../parser";
 
 const RESERVED_KEYWORDS = [
 	"nll", "l'", "kue", "xok",
@@ -149,7 +150,7 @@ class AtaAsmParser extends AsmParser {
 				if (isRegister(dispToken.text)) {
 					return V.indRegReg("f5", dispToken.text);
 				} else if (/^\d+$/.test(dispToken.text)) {
-					return V.indRegDisp("f5", parseInt(dispToken.text));
+					return V.indRegDisp("f5", parseInt32(dispToken.text));
 				}
 				throw new ParseError("Invalid displacement", dispToken);
 			}
@@ -220,9 +221,9 @@ class AtaAsmParser extends AsmParser {
 		for (const [label, token] of this.labelDefinitions.entries()) {
 			if (label.startsWith("lar-sit")) {
 				const count = label.substr(7);
-				if (/\d+/.test(count)) {
-					const countInt = parseInt(count);
-					if (1 <= countInt && countInt <= this.larCount) {
+				if (/^[1-9]\d*$/.test(count)) {
+					const countInt = parseInt(count, 10);
+					if (countInt <= this.larCount) {
 						continue;
 					}
 				}

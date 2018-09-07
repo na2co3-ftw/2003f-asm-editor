@@ -89,3 +89,15 @@ export abstract class Parser<T> {
 		this.errors.push(new ParseError(message, token));
 	}
 }
+
+export function parseInt32(str: string): number {
+	const length = str.length;
+	if (length <= 15) {
+		return parseInt(str, 10) | 0;
+	}
+	let n = 0;
+	for (let i = 0; i < length; i++) {
+		n = (n * 10 + str.charCodeAt(i) - 0x30) | 0;
+	}
+	return n;
+}

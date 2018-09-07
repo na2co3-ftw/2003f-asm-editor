@@ -1,5 +1,5 @@
 import {Compare, COMPARES, isCompare, ParseError, Token} from "../types";
-import {Parser} from "../parser";
+import {parseInt32, Parser} from "../parser";
 import {isValidLabel} from "../2003lk/parser";
 
 export abstract class Definition {
@@ -341,8 +341,15 @@ export class TinkaParser extends Parser<{definitions: Definition[], hasMain: boo
 				} if (!/^[+-]?\d+$/.test(size)) {
 					throw new ParseError(`Invalid variable size '${size}'`, nameToken);
 				}
-				if (/^[+-]/.test(size)) {
-					this.warning(`Improper variable size with '${size[0]}'`, nameToken);
+				let sizeNum: number;
+				if (size[0] == "-") {
+					this.warning(`Improper negative variable size`, nameToken);
+					sizeNum = -parseInt32(size.substr(1));
+				} else if (size[0] == "+") {
+					this.warning(`Improper variable size with '+'`, nameToken);
+					sizeNum = parseInt32(size.substr(1));
+				} else {
+					sizeNum = parseInt32(size);
 				}
 				if (split.length > 2) {
 					this.warning(`Redundant '${"@" + split.slice(2).join("@")}'`, nameToken);
@@ -352,7 +359,7 @@ export class TinkaParser extends Parser<{definitions: Definition[], hasMain: boo
 					token,
 					{text: name, token: nameToken},
 					true,
-					parseInt(size)
+					sizeNum
 				);
 			} else {
 				if (!isValidVariable(nameToken.text)) {
@@ -453,7 +460,7 @@ export class TinkaParser extends Parser<{definitions: Definition[], hasMain: boo
 		if (lastValueStr == "") {
 			throw new ParseError("Invalid operand", token);
 		} else if (/^\d+$/.test(lastValueStr)) {
-			lastValue = new Expression.Constant(token, parseInt(lastValueStr));
+			lastValue = new Expression.Constant(token, parseInt32(lastValueStr));
 		} else {
 			lastValue = new AnaxExpression(token, lastValueStr);
 		}

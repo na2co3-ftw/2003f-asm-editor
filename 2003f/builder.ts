@@ -204,7 +204,7 @@ export namespace V {
 	export function imm(value: number): Value.Imm {
 		return {
 			type: "Imm",
-			value: value
+			value: value | 0
 		};
 	}
 
@@ -226,7 +226,7 @@ export namespace V {
 		return {
 			type: "IndRegDisp",
 			reg: register,
-			offset: disp
+			offset: disp | 0
 		};
 	}
 

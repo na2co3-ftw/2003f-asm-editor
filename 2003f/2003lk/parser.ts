@@ -3,7 +3,7 @@ import {
 	WritableValue
 } from "../types";
 import {AsmBuilder, BINARY_OPERATORS, BuilderError, TERNARY_OPERATORS, V} from "../builder";
-import {Parser} from "../parser";
+import {parseInt32, Parser} from "../parser";
 
 const RESERVED_REGISTERS = [
 	"f0", "f1", "f2", "f3", "f4", "f5", "f6", "f7", "xx"
@@ -289,7 +289,7 @@ export class AsmParser extends Parser<AsmModule> {
 					return V.indRegReg(token.text, dispToken.text);
 				} else if (/^\d+$/.test(dispToken.text)) {
 					this.takeString("@");
-					return V.indRegDisp(token.text, parseInt(dispToken.text));
+					return V.indRegDisp(token.text, parseInt32(dispToken.text));
 				}
 				throw new ParseError("Invalid displacement", dispToken);
 			} else if (this.takeIfString("@")) {
@@ -307,7 +307,7 @@ export class AsmParser extends Parser<AsmModule> {
 		}
 
 		if (/^\d+$/.test(token.text)) {
-			return V.imm(parseInt(token.text));
+			return V.imm(parseInt32(token.text));
 		}
 		if (isValidLabel(token.text)) {
 			this.useLabel(token);

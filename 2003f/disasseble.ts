@@ -49,11 +49,11 @@ function getOp(operand: Value): string {
 		case "IndReg":
 			return operand.reg + "@";
 		case "IndRegDisp":
-			return `${operand.reg}+${operand.offset}@`;
+			return `${operand.reg}+${operand.offset >>> 0}@`;
 		case "IndRegReg":
 			return `${operand.reg1}+${operand.reg2}@`;
 		case "Imm":
-			return operand.value.toString();
+			return (operand.value >>> 0).toString();
 		case "Label":
 			return operand.label;
 	}

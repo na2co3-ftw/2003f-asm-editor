@@ -1,5 +1,5 @@
 import {COMPARES, ParseError, Token} from "../types";
-import {Parser} from "../parser";
+import {parseInt32, Parser} from "../parser";
 import {isValidLabel} from "../2003lk/parser";
 
 export const BI_OPERATORS = [
@@ -228,7 +228,7 @@ export class CentParser extends Parser<CentParsed> {
 
 		this.takeString(">");
 
-		return {name: nameToken, argNum: parseInt(argNumToken.text)};
+		return {name: nameToken, argNum: parseInt32(argNumToken.text)};
 	}
 
 	private parseSubroutineOrFunction(block: string | null = null) {
@@ -250,7 +250,7 @@ export class CentParser extends Parser<CentParsed> {
 	private parseOperation(inSubroutine: boolean): Operation {
 		const token = this.take();
 		if (/^\d+$/.test(token.text)) {
-			return new Operation.Number(token, parseInt(token.text));
+			return new Operation.Number(token, parseInt32(token.text));
 		}
 		if (token.text == "fi") {
 			let mal: Operation[] = [];
