@@ -92,9 +92,9 @@ export function isValidLabel(name: string): boolean {
 }
 
 export class AsmParser extends Parser<AsmModule> {
-	protected builder: AsmBuilder;
+	private builder: AsmBuilder;
 	private isCI = false;
-	protected explicitSpecifiedOrder = false;
+	private explicitSpecifiedOrder = false;
 	private previousInstToken: Token | null = null;
 	private previousDirectiveToken: Token | null = null;
 	private afterFi = false;
@@ -102,8 +102,8 @@ export class AsmParser extends Parser<AsmModule> {
 	private afterNll = false;
 	private afterInstruction = false;
 
-	protected labelDefinitions = new Map<string, Token>();
-	protected labelUses = new Map<string, Token[]>();
+	private labelDefinitions = new Map<string, Token>();
+	private labelUses = new Map<string, Token[]>();
 
 	constructor(tokens: Token[], eof: Token, name: string) {
 		super(tokens, eof);
@@ -139,9 +139,7 @@ export class AsmParser extends Parser<AsmModule> {
 			return;
 		}
 
-		if (this.parseExtraInstruction(token)) {
-			// nothing
-		} else if (token.text == "fen") {
+		if (token.text == "fen") {
 			this.builder.fen();
 		} else if (token.text == "nac") {
 			this.builder.nac(this.parseWritableOperand());
@@ -213,15 +211,8 @@ export class AsmParser extends Parser<AsmModule> {
 		this.afterInstruction = true;
 	}
 
-	// for override
-	protected parseExtraInstruction(token: Token): boolean {
-		return false;
-	}
-
 	private parseDirective(token: Token) {
-		if (this.parseExtraDirective(token)) {
-			// nothing
-		} else if (token.text == "'c'i") {
+		if (token.text == "'c'i") {
 			this.isCI = true;
 			this.explicitSpecifiedOrder = true;
 		} else if (token.text == "'i'c") {
@@ -270,12 +261,7 @@ export class AsmParser extends Parser<AsmModule> {
 		return true;
 	}
 
-	// for override
-	protected parseExtraDirective(token: Token): boolean {
-		return false;
-	}
-
-	protected parseOperand(writable: boolean = false): Value {
+	private parseOperand(writable: boolean = false): Value {
 		const token = this.take();
 		if (token == this.eof) {
 			throw new ParseError("Operand expected", this.eof);
@@ -298,10 +284,6 @@ export class AsmParser extends Parser<AsmModule> {
 				return V.reg(token.text);
 			}
 		}
-		const ex = this.parseExtraWritableOperand(token);
-		if (ex != null) {
-			return ex;
-		}
 		if (writable) {
 			throw new ParseError("Invalid operand to write value", token);
 		}
@@ -316,16 +298,11 @@ export class AsmParser extends Parser<AsmModule> {
 		throw new ParseError("Invalid operand", token);
 	}
 
-	// for override
-	protected parseExtraWritableOperand(token: Token): WritableValue | null {
-		return null;
-	}
-
-	protected parseWritableOperand(): WritableValue {
+	private parseWritableOperand(): WritableValue {
 		return this.parseOperand(true) as WritableValue;
 	}
 
-	protected parseCompare(): Compare {
+	private parseCompare(): Compare {
 		const token = this.take();
 		if (token != this.eof && isCompare(token.text)) {
 			return token.text;
@@ -333,7 +310,7 @@ export class AsmParser extends Parser<AsmModule> {
 		throw new ParseError("Compare keyword expected", token);
 	}
 
-	protected parseLabel(strict: boolean = false): Token {
+	private parseLabel(strict: boolean = false): Token {
 		const token = this.take();
 		if (token == this.eof) {
 			throw new ParseError("Label name expected", token);
@@ -349,7 +326,7 @@ export class AsmParser extends Parser<AsmModule> {
 		throw new ParseError("Invalid label name", token);
 	}
 
-	protected defineLabel(token: Token) {
+	private defineLabel(token: Token) {
 		const definedLabel = this.labelDefinitions.get(token.text);
 		if (definedLabel) {
 			this.errorWithoutThrow(`'${token.text}' is already defined`, token);
@@ -358,7 +335,7 @@ export class AsmParser extends Parser<AsmModule> {
 		}
 	}
 
-	protected useLabel(token: Token) {
+	private useLabel(token: Token) {
 		let uses = this.labelUses.get(token.text);
 		if (uses) {
 			uses.push(token);
@@ -367,7 +344,7 @@ export class AsmParser extends Parser<AsmModule> {
 		}
 	}
 
-	protected verify() {
+	private verify() {
 		for (const [label, tokens] of this.labelUses) {
 			const def = this.labelDefinitions.has(label);
 			if (!def) {

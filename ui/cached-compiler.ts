@@ -3,7 +3,7 @@ import isEqual from "lodash.isequal";
 import {fullCompile as compileAsm} from "../2003f/2003lk/parser";
 import {fullCompile as compileTinka} from "../2003f/tinka/compiler";
 import {fullCompile as compileCent} from "../2003f/cent/compiler";
-import {fullCompile as compileAtaAsm} from "../2003f/ata2003lk/parser";
+import {fullCompile as compileAtaAsm} from "../2003f/ata2003lk/compiler";
 import {linkModules, Program} from "../2003f/linker";
 import {AsmModule, CompileResult, ParseError, Token} from "../2003f/types";
 import {disassemble} from "../2003f/disasseble";

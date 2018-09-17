@@ -8,7 +8,7 @@ const MNEMONICS = [
 	"dto", "d[rR]o", "dtosna",
 	"fi",
 	"fen",
-	"zali", "ycax", "fenx", "dosn"
+	"zali", "ycax", "fenx", "dosn", "dus", "maldus"
 ];
 
 const COMPARES = [
@@ -17,17 +17,16 @@ const COMPARES = [
 ];
 
 const REGISTERS = [
-	"f0", "f1", "f2", "f3", "f5", "xx"
+	"f0", "f1", "f2", "f3", "f5", "q"
 ];
 
 const DIRECTIVES = [
-	"'c'i", "'i'c",
 	"l'", "nll", "cers",
 	"kue", "xok"
 ];
 
 const BUILTINFUNCTIONS = [
-	"3126834864"
+	"tvarlon-knloan"
 ];
 
 CodeMirror.defineSimpleMode("ata2003lk", {
@@ -39,9 +38,8 @@ CodeMirror.defineSimpleMode("ata2003lk", {
 		{regex: new RegExp(`(${BUILTINFUNCTIONS.join("|")})(?![\\w'_-])`), token: "builtin"},
 		{regex: /lar(?![\w'_-])/, token: "keyword", indent: true},
 		{regex: /ral(?![\w'_-])/, token: "keyword", dedent: true},
-		{regex: /s(?=\s*@)/, token: "builtin"},
 		{regex: /\d+(?![\w'_-])/, token: "number"},
-		{regex: /[@+]/, token: "operator"},
+		{regex: /@/, token: "operator"},
 		{regex: /;/, token: "comment", next: "comment"},
 		{regex: /[^\sFRVXa-z0-9'_-]/, token: "error" },
 		{regex: /[^\s;]+/, token: null}
