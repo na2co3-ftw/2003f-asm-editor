@@ -181,7 +181,7 @@ class App extends React.Component<{}, AppState> {
 		if (this.machine.program == null) {
 			return null;
 		}
-		const inst = this.machine.program.readNX(this.machine.cpu.nx);
+		const inst = this.machine.program.readInstruction(this.machine.cpu.nx);
 		if (inst != null && inst.token) {
 			return inst.token;
 		}

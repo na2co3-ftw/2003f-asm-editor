@@ -1,5 +1,5 @@
 import {
-	AsmModule, Compare, Instruction, LabeledInstruction, LabelWithToken, Register, Token, Value,
+	AsmModule, Compare, Instruction, LabeledInstruction, LabeledValue, LabelWithToken, Register, Token, Value,
 	WritableValue
 } from "./types";
 
@@ -23,34 +23,41 @@ export const TERNARY_OPERATORS = Instruction.TERNARY_OPCODES;
 
 export class AsmBuilder {
 	private instructions: LabeledInstruction[] = [];
+	private values: LabeledValue[] = [];
 	private kueList: LabelWithToken[] = [];
 	private xokList: LabelWithToken[] = [];
 	private hasMain: boolean = false;
 	private nextLabels: string[] = [];
 	private nextToken: Token | null = null;
+	private afterInstruction: boolean = false;
+	private afterValue: boolean = false;
 	constructor(private name: string) {}
 
 	getAsmModule(): AsmModule {
 		if (this.nextLabels.length != 0) {
-			throw new BuilderError("nll must be followed by an instruction");
+			throw new BuilderError("nll must be followed by an instruction or 'lifem'");
 		}
 		return {
 			name: this.name,
 			instructions: this.instructions,
+			values: this.values,
 			kueList: this.kueList,
 			xokList: this.xokList,
 			hasMain: this.hasMain
 		};
 	}
 
-	private add(instruction: Instruction) {
-		let labeledInst: LabeledInstruction = {instruction, labels: this.nextLabels};
-		if (this.nextToken) {
-			labeledInst.token = this.nextToken;
+	l(label: string) {
+		if (this.nextLabels.length != 0) {
+			throw new BuilderError("nll must not be followed by l'");
 		}
-		this.instructions.push(labeledInst);
-		this.nextLabels = [];
-		this.nextToken = null;
+		if (this.afterInstruction) {
+			this.instructions[this.instructions.length - 1].labels.push(label);
+		} else if (this.afterValue) {
+			this.values[this.values.length - 1].labels.push(label);
+		} else {
+			throw new BuilderError("l' must be preceded by an instruction or 'lifem'");
+		}
 	}
 
 	static isBinOp(mnemonic: string): boolean {
@@ -141,14 +148,21 @@ export class AsmBuilder {
 		this.add({opcode: "fen"});
 	}
 
-	l(label: string) {
-		if (this.instructions.length == 0) {
-			throw new BuilderError("l' must be preceded by an instruction");
+	addValue(value: number | string, size: number) {
+		this.values.push({
+			size, value, labels: this.nextLabels
+		});
+		if (!this.afterValue) {
+			this.instructions.push({
+				instruction: {opcode: "error", message: "'lifem' is not executable"},
+				labels: [],
+				token: this.nextToken || undefined
+			});
 		}
-		if (this.nextLabels.length != 0) {
-			throw new BuilderError("nll must not be followed by l'");
-		}
-		this.instructions[this.instructions.length - 1].labels.push(label);
+		this.nextLabels = [];
+		this.nextToken = null;
+		this.afterInstruction = false;
+		this.afterValue = true;
 	}
 
 	nll(label: string) {
@@ -189,6 +203,18 @@ export class AsmBuilder {
 			return;
 		}
 		throw new BuilderError(`'${mnemonic}' is not a ternary operator`);
+	}
+
+	private add(instruction: Instruction) {
+		let labeledInst: LabeledInstruction = {instruction, labels: this.nextLabels};
+		if (this.nextToken) {
+			labeledInst.token = this.nextToken;
+		}
+		this.instructions.push(labeledInst);
+		this.nextLabels = [];
+		this.nextToken = null;
+		this.afterInstruction = true;
+		this.afterValue = false;
 	}
 }
 
@@ -235,6 +261,38 @@ export namespace V {
 			type: "IndRegReg",
 			reg1: register1,
 			reg2: register2
+		};
+	}
+
+	export function indLabel(label: string): Value.IndLabel {
+		return {
+			type: "IndLabel",
+			label: label
+		};
+	}
+
+	export function indLabelDisp(label: string, disp: number): Value.IndLabelDisp {
+		return {
+			type: "IndLabelDisp",
+			label: label,
+			offset: disp
+		};
+	}
+
+	export function indLabelReg(label: string, register: Register): Value.IndLabelReg {
+		return {
+			type: "IndLabelReg",
+			label: label,
+			reg: register
+		};
+	}
+
+	export function indLabelRegDisp(label: string, register: Register, disp: number): Value.IndLabelRegDisp {
+		return {
+			type: "IndLabelRegDisp",
+			label: label,
+			reg: register,
+			offset: disp
 		};
 	}
 

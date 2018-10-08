@@ -18,7 +18,9 @@ export function isRegister(reg: string): reg is Register {
 }
 
 
-export type WritableValue = Value.Reg | Value.IndReg | Value.IndRegDisp | Value.IndRegReg;
+export type WritableValue =
+	Value.Reg | Value.IndReg | Value.IndRegDisp | Value.IndRegReg |
+	Value.IndLabel | Value.IndLabelDisp | Value.IndLabelReg | Value.IndLabelRegDisp;
 
 export type Value = WritableValue | Value.Imm | Value.Label;
 
@@ -54,6 +56,30 @@ export namespace Value {
 		type: "Label";
 		label: string;
 	}
+
+	export interface IndLabel {
+		type: "IndLabel";
+		label: string;
+	}
+
+	export interface IndLabelDisp {
+		type: "IndLabelDisp";
+		label: string;
+		offset: number;
+	}
+
+	export interface IndLabelReg {
+		type: "IndLabelReg";
+		label: string;
+		reg: Register;
+	}
+
+	export interface IndLabelRegDisp {
+		type: "IndLabelRegDisp";
+		label: string;
+		reg: Register;
+		offset: number;
+	}
 }
 
 
@@ -63,7 +89,8 @@ export type Instruction =
 	Instruction.TernaryInstruction |
 	Instruction.Fi |
 	Instruction.Inj |
-	Instruction.Fen;
+	Instruction.Fen |
+	Instruction.Error;
 
 export namespace Instruction {
 	export type BinaryOpcode =
@@ -129,6 +156,11 @@ export namespace Instruction {
 	export interface Fen {
 		opcode: "fen";
 	}
+
+	export interface Error {
+		opcode: "error";
+		message: string;
+	}
 }
 
 
@@ -152,11 +184,18 @@ export type LabeledInstruction = {
 	token?: Token;
 }
 
+export type LabeledValue = {
+	size: number,
+	value: number | string,
+	labels: string[]
+}
+
 export type LabelWithToken = {name: string, token: Token | null};
 
 export interface AsmModule {
 	name: string;
 	instructions: LabeledInstruction[];
+	values: LabeledValue[];
 	kueList: LabelWithToken[];
 	xokList: LabelWithToken[];
 	hasMain: boolean;

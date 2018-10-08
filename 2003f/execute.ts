@@ -83,6 +83,18 @@ const enum ExecResult {
 	CONTINUE, END, BREAK, ERROR
 }
 
+type MemoryValue =
+	Value.IndReg | Value.IndRegDisp | Value.IndRegReg |
+	Value.IndLabel | Value.IndLabelDisp | Value.IndLabelReg | Value.IndLabelRegDisp;
+
+const MEMORY_VALUES = [
+	"IndReg", "IndRegDisp", "IndRegReg", "IndLabel", "IndLabelDisp", "IndLabelReg", "IndLabelRegDisp"
+];
+
+function isMemoryValue(value: Value): value is MemoryValue {
+	return MEMORY_VALUES.indexOf(value.type) >= 0;
+}
+
 export class Hardware {
 	cpu: CPU;
 	memory: Memory;
@@ -115,6 +127,7 @@ export class Hardware {
 
 	load(program: Program) {
 		this.program = program;
+		this.program.initializeMemory(this.memory);
 	}
 
 	execOneStep(initial: boolean = false): boolean {
@@ -129,7 +142,7 @@ export class Hardware {
 		if (this.program == null) {
 			return ExecResult.END;
 		}
-		const xxInst = this.program.readNX(this.cpu.nx);
+		const xxInst = this.program.readInstruction(this.cpu.nx);
 		if (xxInst == null) {
 			this.errors.push(new RuntimeError("nx has an invalid address " + this.cpu.nx));
 			return ExecResult.ERROR;
@@ -229,157 +242,110 @@ export class Hardware {
 			}
 			case "fen":
 				return;
+			case "error":
+				throw new RuntimeError(inst.message);
 		}
 	}
 
+	private calcAddress(operand: MemoryValue): number {
+		switch (operand.type) {
+			case "IndReg":
+				return this.cpu.getRegister(operand.reg);
+			case "IndRegDisp":
+				return (this.cpu.getRegister(operand.reg) + operand.offset) | 0;
+			case "IndRegReg":
+				return (this.cpu.getRegister(operand.reg1) + this.cpu.getRegister(operand.reg2)) | 0;
+			case "IndLabel":
+				return this.resolveLabel(operand.label);
+			case "IndLabelDisp":
+				return (this.resolveLabel(operand.label) + operand.offset) | 0;
+			case "IndLabelReg":
+				return (this.resolveLabel(operand.label) + this.cpu.getRegister(operand.reg)) | 0;
+			case "IndLabelRegDisp":
+				return (this.resolveLabel(operand.label) +
+					this.cpu.getRegister(operand.reg) + operand.offset) | 0;
+		}
+	}
+
+	private resolveLabel(label: string): number {
+		if (this.program == null) {
+			throw new RuntimeError(`Undefined label '${label}'`);
+		}
+		const address = this.program.resolveLabel(this.cpu.nx, label);
+		if (address == null) {
+			throw new RuntimeError(`Undefined label '${label}'`);
+		}
+		return address;
+	}
+
 	private getValue(operand: Value): number {
+		if (isMemoryValue(operand)) {
+			return this.memory.read(this.calcAddress(operand));
+		}
 		switch (operand.type) {
 			case "Reg":
 				return this.cpu.getRegister(operand.reg);
-			case "IndReg":
-				return this.memory.read(this.cpu.getRegister(operand.reg));
-			case "IndRegDisp": {
-				const address = (this.cpu.getRegister(operand.reg) + operand.offset) | 0;
-				return this.memory.read(address);
-			}
-			case "IndRegReg": {
-				const address = (this.cpu.getRegister(operand.reg1) + this.cpu.getRegister(operand.reg2)) | 0;
-				return this.memory.read(address);
-			}
 			case "Imm":
 				return operand.value;
-			case "Label": {
-				if (this.program == null) {
-					throw new RuntimeError(`Undefined label '${operand.label}'`);
-				}
-				const address = this.program.resolveLabel(this.cpu.nx, operand.label);
-				if (address == null) {
-					throw new RuntimeError(`Undefined label '${operand.label}'`);
-				}
-				return address;
-			}
+			case "Label":
+				return this.resolveLabel(operand.label);
 		}
 	}
 
 	private setValue(operand: WritableValue, value: number) {
-		switch (operand.type) {
-			case "Reg":
-				this.cpu.setRegister(operand.reg, value);
-				return;
-			case "IndReg":
-				this.memory.write(this.cpu.getRegister(operand.reg), value);
-				return;
-			case "IndRegDisp": {
-				const address = (this.cpu.getRegister(operand.reg) + operand.offset) | 0;
-				this.memory.write(address, value);
-				return;
-			}
-			case "IndRegReg": {
-				const address = (this.cpu.getRegister(operand.reg1) + this.cpu.getRegister(operand.reg2)) | 0;
-				this.memory.write(address, value);
-				return;
-			}
+		if (isMemoryValue(operand)) {
+			this.memory.write(this.calcAddress(operand), value);
+			return;
 		}
+		this.cpu.setRegister(operand.reg, value);
 	}
 
 	private getValue8(operand: Value): number {
+		if (isMemoryValue(operand)) {
+			return this.memory.read8(this.calcAddress(operand));
+		}
 		switch (operand.type) {
 			case "Reg":
 				return this.cpu.getRegister(operand.reg) >> 24;
-			case "IndReg":
-				return this.memory.read8(this.cpu.getRegister(operand.reg));
-			case "IndRegDisp": {
-				const address = (this.cpu.getRegister(operand.reg) + operand.offset) | 0;
-				return this.memory.read8(address);
-			}
-			case "IndRegReg": {
-				const address = (this.cpu.getRegister(operand.reg1) + this.cpu.getRegister(operand.reg2)) | 0;
-				return this.memory.read8(address);
-			}
 			case "Imm":
 				return operand.value >> 24;
-			case "Label": {
-				if (this.program == null) {
-					throw new RuntimeError(`Undefined label '${operand.label}'`);
-				}
-				const address = this.program.resolveLabel(this.cpu.nx, operand.label);
-				if (address == null) {
-					throw new RuntimeError(`Undefined label '${operand.label}'`);
-				}
-				return address >> 24;
-			}
+			case "Label":
+				return this.resolveLabel(operand.label) >> 24;
 		}
 	}
 
 	private setValue8(operand: WritableValue, value: number) {
-		switch (operand.type) {
-			case "Reg":
-				this.cpu.setRegister(operand.reg, (this.cpu.getRegister(operand.reg) & 0x00ffffff) | ((value & 0xff) << 24));
-				return;
-			case "IndReg":
-				this.memory.write8(this.cpu.getRegister(operand.reg), value);
-				return;
-			case "IndRegDisp": {
-				const address = (this.cpu.getRegister(operand.reg) + operand.offset) | 0;
-				this.memory.write8(address, value);
-				return;
-			}
-			case "IndRegReg": {
-				const address = (this.cpu.getRegister(operand.reg1) + this.cpu.getRegister(operand.reg2)) | 0;
-				this.memory.write8(address, value);
-				return;
-			}
+		if (isMemoryValue(operand)) {
+			this.memory.write8(this.calcAddress(operand), value);
+			return;
 		}
+
+		const oldValue = this.cpu.getRegister(operand.reg);
+		this.cpu.setRegister(operand.reg, (oldValue & 0x00ffffff) | ((value & 0xff) << 24));
 	}
 
 	private getValue16(operand: Value): number {
+		if (isMemoryValue(operand)) {
+			return this.memory.read16(this.calcAddress(operand));
+		}
 		switch (operand.type) {
 			case "Reg":
 				return this.cpu.getRegister(operand.reg) >> 16;
-			case "IndReg":
-				return this.memory.read16(this.cpu.getRegister(operand.reg));
-			case "IndRegDisp": {
-				const address = (this.cpu.getRegister(operand.reg) + operand.offset) | 0;
-				return this.memory.read16(address);
-			}
-			case "IndRegReg": {
-				const address = (this.cpu.getRegister(operand.reg1) + this.cpu.getRegister(operand.reg2)) | 0;
-				return this.memory.read16(address);
-			}
 			case "Imm":
 				return operand.value >> 16;
-			case "Label": {
-				if (this.program == null) {
-					throw new RuntimeError(`Undefined label '${operand.label}'`);
-				}
-				const address = this.program.resolveLabel(this.cpu.nx, operand.label);
-				if (address == null) {
-					throw new RuntimeError(`Undefined label '${operand.label}'`);
-				}
-				return address >> 16;
-			}
+			case "Label":
+				return this.resolveLabel(operand.label) >> 16;
 		}
 	}
 
 	private setValue16(operand: WritableValue, value: number) {
-		switch (operand.type) {
-			case "Reg":
-				this.cpu.setRegister(operand.reg, (this.cpu.getRegister(operand.reg) & 0x0000ffff) | ((value & 0xffff) << 16));
-				return;
-			case "IndReg":
-				this.memory.write16(this.cpu.getRegister(operand.reg), value);
-				return;
-			case "IndRegDisp": {
-				const address = (this.cpu.getRegister(operand.reg) + operand.offset) | 0;
-				this.memory.write16(address, value);
-				return;
-			}
-			case "IndRegReg": {
-				const address = (this.cpu.getRegister(operand.reg1) + this.cpu.getRegister(operand.reg2)) | 0;
-				this.memory.write16(address, value);
-				return;
-			}
+		if (isMemoryValue(operand)) {
+			this.memory.write16(this.calcAddress(operand), value);
+			return;
 		}
+
+		const oldValue = this.cpu.getRegister(operand.reg);
+		this.cpu.setRegister(operand.reg, (oldValue & 0x0000ffff) | ((value & 0xffff) << 16));
 	}
 
 	finalize() {

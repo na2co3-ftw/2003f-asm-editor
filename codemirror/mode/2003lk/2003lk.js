@@ -22,7 +22,8 @@ const REGISTERS = [
 const DIRECTIVES = [
 	"'c'i", "'i'c",
 	"l'", "nll",
-	"kue", "xok"
+	"kue", "xok",
+	"lifem", "lifem16", "lifem8"
 ];
 
 const BUILTINFUNCTIONS = [

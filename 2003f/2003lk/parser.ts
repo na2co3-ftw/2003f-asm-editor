@@ -100,7 +100,7 @@ export class AsmParser extends Parser<AsmModule> {
 	private afterFi = false;
 	private afterMalkrz = false;
 	private afterNll = false;
-	private afterInstruction = false;
+	private afterDirective = false;
 
 	private labelDefinitions = new Map<string, Token>();
 	private labelUses = new Map<string, Token[]>();
@@ -136,6 +136,9 @@ export class AsmParser extends Parser<AsmModule> {
 		this.builder.setNextToken(token);
 
 		if (this.parseDirective(token)) {
+			return;
+		}
+		if (this.parseLifem(token)) {
 			return;
 		}
 
@@ -208,7 +211,7 @@ export class AsmParser extends Parser<AsmModule> {
 		this.afterFi = token.text == "fi";
 		this.afterMalkrz = token.text == "malkrz" || token.text == "malkRz";
 		this.afterNll = false;
-		this.afterInstruction = true;
+		this.afterDirective = false;
 	}
 
 	private parseDirective(token: Token) {
@@ -227,7 +230,7 @@ export class AsmParser extends Parser<AsmModule> {
 				const label = this.parseLabel(true);
 				this.defineLabel(label);
 				this.builder.l(label.text);
-				if (!this.afterInstruction) {
+				if (this.afterDirective) {
 					this.warning("l' should be directly preceded by an instruction", token);
 				} else if (this.afterMalkrz) {
 					this.warning("'malkrz' should not be labeled", token);
@@ -257,7 +260,42 @@ export class AsmParser extends Parser<AsmModule> {
 		}
 		this.previousDirectiveToken = token;
 		this.afterNll = token.text == "nll";
-		this.afterInstruction = false;
+		this.afterDirective = true;
+		return true;
+	}
+
+	private parseLifem(token: Token): boolean {
+		let size: number;
+		if (token.text == "lifem") {
+			size = 4;
+		} else if (token.text == "lifem16") {
+			size = 2;
+		} else if (token.text == "lifem8") {
+			size = 1;
+		} else {
+			return false;
+		}
+
+		const valueToken = this.take();
+		if (valueToken == this.eof) {
+			throw new ParseError("Value expected", this.eof);
+		}
+		if (/^\d+$/.test(valueToken.text)) {
+			this.builder.addValue(parseInt32(valueToken.text), size);
+		} else if (isValidLabel(valueToken.text)) {
+			this.useLabel(valueToken);
+			this.builder.addValue(valueToken.text, size);
+		} else {
+			throw new ParseError("Invalid value", valueToken);
+		}
+
+		if (this.afterFi) {
+			this.warning("'fi' should be followed by 'malkrz'", this.previousInstToken);
+		}
+		this.afterFi = false;
+		this.afterMalkrz = false;
+		this.afterNll = false;
+		this.afterDirective = false;
 		return true;
 	}
 
@@ -284,16 +322,48 @@ export class AsmParser extends Parser<AsmModule> {
 				return V.reg(token.text);
 			}
 		}
+		if (isValidLabel(token.text)) {
+			this.useLabel(token);
+			if (this.takeIfString("+")) {
+				const dispToken = this.take();
+				if (isRegister(dispToken.text)) {
+					if (this.takeIfString("+")) {
+						const disp2Token = this.take();
+						if (!/^\d+$/.test(disp2Token.text)) {
+							throw new ParseError("Invalid displacement", disp2Token);
+						}
+						this.takeString("@");
+						return V.indLabelRegDisp(token.text, dispToken.text, parseInt32(disp2Token.text));
+					} else {
+						this.takeString("@");
+						return V.indLabelReg(token.text, dispToken.text);
+					}
+				} else if (/^\d+$/.test(dispToken.text)) {
+					if (this.takeIfString("+")) {
+						const disp2Token = this.take();
+						if (!isRegister(disp2Token.text)) {
+							throw new ParseError("Invalid displacement", disp2Token);
+						}
+						this.takeString("@");
+						return V.indLabelRegDisp(token.text, disp2Token.text, parseInt32(dispToken.text));
+					} else {
+						this.takeString("@");
+						return V.indLabelDisp(token.text, parseInt32(dispToken.text));
+					}
+				}
+				throw new ParseError("Invalid displacement", dispToken);
+			} else if (this.takeIfString("@")) {
+				return V.indLabel(token.text);
+			} else if (!writable) {
+				return V.label(token.text);
+			}
+		}
 		if (writable) {
 			throw new ParseError("Invalid operand to write value", token);
 		}
 
 		if (/^\d+$/.test(token.text)) {
 			return V.imm(parseInt32(token.text));
-		}
-		if (isValidLabel(token.text)) {
-			this.useLabel(token);
-			return V.label(token.text);
 		}
 		throw new ParseError("Invalid operand", token);
 	}

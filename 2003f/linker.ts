@@ -1,4 +1,5 @@
 import {AsmModule, Instruction, ParseError, Token} from "./types";
+import {Memory} from "./memory";
 
 export const initialAddress = 0x14830000|0;
 
@@ -10,8 +11,14 @@ export interface LoadedInstruction {
 	token?: Token
 }
 
+export interface LoadedValue {
+	size: number,
+	value: number | string
+}
+
 export interface TentativeLoad {
-	addressTable: Map<number, LoadedInstruction>;
+	codeTable: Map<number, LoadedInstruction>;
+	valueTable: Map<number, LoadedValue>;
 	labels: Map<string, number>;
 	xoks: Set<string>;
 }
@@ -22,16 +29,43 @@ export class Program {
 		private kueTable: Map<string, number>
 	) {}
 
-	readNX(address: number): LoadedInstruction | null {
+	readInstruction(address: number): LoadedInstruction | null {
 		const page = this.pages.get(addressToPageId(address));
 		if (page) {
-			return page.addressTable.get(address) || null;
+			return page.codeTable.get(address) || null;
 		}
 		return null;
 	}
 
 	resolveLabel(currentNX: number, label: string): number | null {
-		const page = this.pages.get(addressToPageId(currentNX));
+		return this.resolveLabelWithPageId(addressToPageId(currentNX), label);
+	}
+
+	initializeMemory(memory: Memory) {
+		for (const [pageId, page] of this.pages) {
+			for (const [address, value] of page.valueTable) {
+				let v;
+				if (typeof value.value == "number") {
+					v = value.value;
+				} else {
+					v = this.resolveLabelWithPageId(pageId, value.value);
+					if (v == null) {
+						continue;
+					}
+				}
+				if (value.size == 4) {
+					memory.write(address, v);
+				} else if (value.size == 2) {
+					memory.write16(address, v);
+				} else {
+					memory.write8(address, v);
+				}
+			}
+		}
+	}
+
+	private resolveLabelWithPageId(pageId: number, label: string): number | null {
+		const page = this.pages.get(pageId);
 		if (page) {
 			const localLabel = page.labels.get(label);
 			if (localLabel) {
@@ -97,14 +131,15 @@ function addressToPageId(address: number): number {
 }
 
 function toTentativeLoad(baseAddress: number, file: AsmModule): {page: TentativeLoad, errors: ParseError[]} {
-	let addressTable = new Map<number, LoadedInstruction>();
 	let labels = new Map<string, number>();
 	let localAddress = 0;
+
+	let codeTable = new Map<number, LoadedInstruction>();
 	let errors: ParseError[] = [];
 	for (const inst of file.instructions) {
 		const address = (baseAddress + localAddress) | 0;
-		const next = localAddress + Math.floor(Math.random() * 4) + 1;
-		addressTable.set(address, {
+		const next = localAddress + 4;
+		codeTable.set(address, {
 			next: (baseAddress + next) | 0,
 			instruction: inst.instruction,
 			token: inst.token
@@ -118,10 +153,27 @@ function toTentativeLoad(baseAddress: number, file: AsmModule): {page: Tentative
 			break;
 		}
 	}
+
+	let valueTable = new Map<number, LoadedValue>();
+	for (const value of file.values) {
+		if (localAddress % value.size != 0) {
+			localAddress += value.size - localAddress % value.size;
+		}
+		if (localAddress >= PAGE_SIZE) {
+			errors.push(new ParseError(`Size of '${file.name}' is exceeds the limit`, null));
+			break;
+		}
+		const address = (baseAddress + localAddress) | 0;
+		valueTable.set(address, value);
+		for (let label of value.labels) {
+			labels.set(label, address);
+		}
+		localAddress += value.size;
+	}
+
 	return {
 		page: {
-			addressTable,
-			labels,
+			codeTable, valueTable, labels,
 			xoks: new Set(file.xokList.map(x => x.name)),
 		},
 		errors

@@ -12,7 +12,11 @@ export function disassemble(module: AsmModule): string {
 	}
 
 	for (const {instruction, labels} of module.instructions) {
-		ret += getInstText(instruction);
+		const text = getInstText(instruction);
+		if (text == null) {
+			continue;
+		}
+		ret += text;
 		for (const label of labels) {
 			ret += ` l' ${label}`;
 		}
@@ -22,7 +26,7 @@ export function disassemble(module: AsmModule): string {
 	return ret;
 }
 
-function getInstText(inst: Instruction): string {
+function getInstText(inst: Instruction): string | null {
 	if (Instruction.isBinary(inst)) {
 		return `${inst.opcode} ${getOp(inst.src)} ${getOp(inst.dst)}`;
 	}
@@ -39,6 +43,8 @@ function getInstText(inst: Instruction): string {
 			return `inj ${getOp(inst.a)} ${getOp(inst.b)} ${getOp(inst.c)}`;
 		case "fen":
 			return "fen";
+		case "error":
+			return null;
 	}
 }
 
@@ -56,5 +62,13 @@ function getOp(operand: Value): string {
 			return (operand.value >>> 0).toString();
 		case "Label":
 			return operand.label;
+		case "IndLabel":
+			return operand.label + "@";
+		case "IndLabelDisp":
+			return `${operand.label}+${operand.offset >>> 0}@`;
+		case "IndLabelReg":
+			return `${operand.label}+${operand.reg}@`;
+		case "IndLabelRegDisp":
+			return `${operand.label}+${operand.reg}+${operand.offset >>> 0}@`;
 	}
 }

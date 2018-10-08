@@ -4,7 +4,7 @@
 参照元: [Haskell Interpreter版](https://github.com/jurliyuuri/OS/tree/master/assembler)
 
 ### 追加した実行時警告
-* 4バイトでアラインメントされていないメモリアクセス
+* アラインメントされていないメモリアクセス
 * 64以上のビットシフト
 
 ## 2003lk
@@ -12,6 +12,7 @@
 
 ### 仕様変更
 * U+2028, U+2029, U+FEFF も空白文字として扱う (Haskellの `isSpace` と JSの `/\s/` の差)
+* `lifem` `lifem8` `lifem16` を試験実装
 
 ### 追加した警告
 * `fi` の直後に `malkrz` がない時
