@@ -1,4 +1,4 @@
-import {AsmBuilder, BuilderError, V} from "../builder";
+import {AsmBuilder, V} from "../builder";
 import {CompileResult, ParseError, Value, WritableValue} from "../types";
 import {AtaAsmParser, AtaInst, tokenize} from "./parser";
 
@@ -95,16 +95,6 @@ function compile(parsed: { instructions: AtaInst[], externalLabels: Set<string> 
 			case "label":
 				if (inst.opcode == "nll" || inst.opcode == "cers") {
 					builder.nll(convertLabel(inst.label.text));
-				} else if (inst.opcode == "l'") {
-					try {
-						builder.l(convertLabel(inst.label.text));
-					} catch (e) {
-						if (e instanceof BuilderError) {
-							errors.push(new ParseError(e.message, inst.token));
-						} else {
-							throw e;
-						}
-					}
 				} else if (inst.opcode == "kue") {
 					builder.setHasMain(false);
 					builder.kue(convertLabel(inst.label.text), inst.label);

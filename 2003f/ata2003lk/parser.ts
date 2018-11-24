@@ -361,17 +361,33 @@ export class AtaAsmParser extends Parser<{ instructions: AtaInst[], externalLabe
 			const label = this.parseLabel(true);
 			this.defineLabel(label);
 			if (this.afterDirective) {
-				this.warning("l' should be directly preceded by an instruction", token);
+				this.warning("l' should be directly preceded by an instruction or 'lifem'", token);
 			} else if (this.afterMalkrz) {
 				this.warning(`'${this.previousInstToken!.text}' should not be labeled`, token);
 			}
 
-			this.instructions.push({
-				type: "label",
-				token: token,
-				opcode: token.text,
-				label: label
-			});
+			let success = false;
+			for (let i = this.instructions.length - 1; i >= 0; i--) {
+				const inst = this.instructions[i];
+				if (inst.type == "label") {
+					if (inst.opcode == "nll" || inst.opcode == "cers") {
+						throw new ParseError(`'${inst.opcode}' must not be followed by l'`, token);
+					}
+					continue;
+				}
+
+				this.instructions.splice(i, 0, {
+					type: "label",
+					token: token,
+					opcode: "nll",
+					label: label
+				});
+				success = true;
+				break;
+			}
+			if (!success) {
+				throw new ParseError("l' must be preceded by an instruction or 'lifem'", token);
+			}
 		} else if (token.text == "kue") {
 			const label = this.parseLabel(false, true);
 			this.useLabel(label);
@@ -399,7 +415,7 @@ export class AtaAsmParser extends Parser<{ instructions: AtaInst[], externalLabe
 		}
 
 		if (this.afterNll) {
-			this.warning("'nll' should be directly followed by an instruction", token);
+			this.warning("'nll' should be directly followed by an instruction or 'lifem'", token);
 		}
 		this.previousDirectiveToken = token;
 		this.afterNll = token.text == "nll";
@@ -612,7 +628,7 @@ export class AtaAsmParser extends Parser<{ instructions: AtaInst[], externalLabe
 		}
 		if (this.afterNll || this.afterCers) {
 			this.errorWithoutThrow(
-				`'${this.previousDirectiveToken!.text}' must be followed by an instruction`,
+				`'${this.previousDirectiveToken!.text}' must be followed by an instruction or 'lifem'`,
 				this.previousDirectiveToken
 			);
 		}
