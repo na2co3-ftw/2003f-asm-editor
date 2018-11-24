@@ -22,7 +22,8 @@ const REGISTERS = [
 
 const DIRECTIVES = [
 	"l'", "nll", "cers",
-	"kue", "xok"
+	"kue", "xok",
+	"lifem", "lifem16", "lifem8"
 ];
 
 const BUILTINFUNCTIONS = [
@@ -39,7 +40,7 @@ CodeMirror.defineSimpleMode("ata2003lk", {
 		{regex: /lar(?![\w'_-])/, token: "keyword", indent: true},
 		{regex: /ral(?![\w'_-])/, token: "keyword", dedent: true},
 		{regex: /\d+(?![\w'_-])/, token: "number"},
-		{regex: /@/, token: "operator"},
+		{regex: /[@+|]/, token: "operator"},
 		{regex: /;/, token: "comment", next: "comment"},
 		{regex: /[^\sFRVXa-z0-9'_-]/, token: "error" },
 		{regex: /[^\s;]+/, token: null}

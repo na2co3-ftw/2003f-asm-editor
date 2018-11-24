@@ -1,11 +1,11 @@
 import {AsmBuilder, BuilderError, V} from "../builder";
-import {CompileResult, ParseError, Value} from "../types";
+import {CompileResult, ParseError, Value, WritableValue} from "../types";
 import {AtaAsmParser, AtaInst, tokenize} from "./parser";
 
 export function fullCompile(str: string, file: string = ""): CompileResult {
 	const tokenized = tokenize(str.replace(/\r\n?/g, "\n"), file);
 	const parsed = new AtaAsmParser(tokenized.tokens, tokenized.eof).parse();
-	if (parsed.root == null) {
+	if (parsed.root == null || parsed.errors.length != 0) {
 		return {
 			data: null,
 			errors: [...tokenized.errors, ...parsed.errors],
@@ -55,20 +55,29 @@ function compile(parsed: { instructions: AtaInst[], externalLabels: Set<string> 
 				break;
 			case "unary":
 				if (inst.opcode == "nac") {
-					builder.nac(inst.dst);
+					builder.nac(convertWritableValue(inst.dst));
 				} else if (inst.opcode == "ycax") {
-					builder.dro(V.imm(2), inst.dst);
-					builder.ata(inst.dst, V.f5);
+					builder.dro(V.imm(2), convertWritableValue(inst.dst));
+					builder.ata(convertWritableValue(inst.dst), V.f5);
 				}
 				break;
 			case "binary":
-				builder.binOp(inst.opcode, convertValue(inst.src), inst.dst);
+				builder.binOp(inst.opcode, convertValue(inst.src), convertWritableValue(inst.dst));
 				break;
 			case "ternary":
 				if (inst.opcode == "inj") {
-					builder.inj(convertValue(inst.src), inst.dst1, inst.dst2);
+					builder.inj(
+						convertValue(inst.src),
+						convertWritableValue(inst.dst1),
+						convertWritableValue(inst.dst2)
+					);
 				} else {
-					builder.triOp(inst.opcode, convertValue(inst.src), inst.dst1, inst.dst2);
+					builder.triOp(
+						inst.opcode,
+						convertValue(inst.src),
+						convertWritableValue(inst.dst1),
+						convertWritableValue(inst.dst2)
+					);
 				}
 				break;
 			case "fi":
@@ -103,6 +112,13 @@ function compile(parsed: { instructions: AtaInst[], externalLabels: Set<string> 
 					builder.xok(convertLabel(inst.label.text), inst.label);
 				}
 				break;
+			case "value":
+				if (typeof inst.value == "string") {
+					builder.addValue(convertLabel(inst.value), inst.size);
+				} else {
+					builder.addValue(inst.value, inst.size);
+				}
+				break;
 		}
 	}
 
@@ -127,6 +143,34 @@ function compile(parsed: { instructions: AtaInst[], externalLabels: Set<string> 
 		if (value.type == "Label") {
 			if (!parsed.externalLabels.has(value.label)) {
 				return V.label(`--${value.label}--`);
+			}
+			return value;
+		}
+		if (value.type == "Imm") {
+			return value;
+		}
+		return convertWritableValue(value);
+	}
+
+	function convertWritableValue(value: WritableValue): WritableValue {
+		if (value.type == "IndLabel") {
+			if (!parsed.externalLabels.has(value.label)) {
+				return V.indLabel(`--${value.label}--`);
+			}
+		}
+		if (value.type == "IndLabelDisp") {
+			if (!parsed.externalLabels.has(value.label)) {
+				return V.indLabelDisp(`--${value.label}--`, value.offset);
+			}
+		}
+		if (value.type == "IndLabelReg") {
+			if (!parsed.externalLabels.has(value.label)) {
+				return V.indLabelReg(`--${value.label}--`, value.reg);
+			}
+		}
+		if (value.type == "IndLabelRegDisp") {
+			if (!parsed.externalLabels.has(value.label)) {
+				return V.indLabelRegDisp(`--${value.label}--`, value.reg, value.offset);
 			}
 		}
 		return value;

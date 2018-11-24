@@ -4,7 +4,7 @@ import {parseInt32, Parser} from "../parser";
 
 export type AtaInst =
 	NullaryInst | UnaryReadonlyInst | UnaryInst | BinaryInst | TernaryInst |
-	CompareInst | LarInst | RalInst | LabelDirective;
+	CompareInst | LarInst | RalInst | LabelDirective | ValueDirective;
 
 interface NullaryInst {
 	type: "nullary";
@@ -73,16 +73,26 @@ interface LabelDirective {
 	label: Token;
 }
 
+interface ValueDirective {
+	type: "value";
+	token: Token;
+	value: number | string;
+	size: number
+}
+
 const SUPPORTED_REGISTERS = ["f0", "f1", "f2", "f3", "f5"];
 
 const RESERVED_KEYWORDS = [
 	"nll", "l'", "kue", "xok", "xx",
+	"lifem", "lifem16", "lifem8",
 	"fen", "nac", ...BINARY_OPERATORS, "kak", ...TERNARY_OPERATORS, ...COMPARES,
 	"fi", "inj",
 	"dosn", "zali", "ycax", "dus", "maldus", "fenx", "cers", "lar", "ral"
 ];
 
 const RESERVED_LABEL_REGEXP = /^--(lar--(sit--)?)\d+$/;
+
+const TVARLON_KNLOAN_ADDRESS = 0xba5fb6b0 | 0;
 
 export function tokenize(source: string, file: string = ""):
 	{ tokens: Token[], eof: Token, errors: ParseError[] } {
@@ -112,8 +122,8 @@ export function tokenize(source: string, file: string = ""):
 		}
 
 		let char = source[pos];
-		if (char == "@") {
-			tokens.push(new Token("@", row, column, file));
+		if (char == "@" || char == "+" || char == "|") {
+			tokens.push(new Token(char, row, column, file));
 			advance();
 			continue;
 		}
@@ -123,7 +133,7 @@ export function tokenize(source: string, file: string = ""):
 		const startColumn = column;
 		while (pos < source.length) {
 			let char = source[pos];
-			if (isWhiteSpace(char) || char == "@" || char == ";") {
+			if (isWhiteSpace(char) || char == "@" || char == "+" || char == "|" || char == ";") {
 				break;
 			}
 			text += char;
@@ -156,7 +166,6 @@ function isValidLabel(name: string): boolean {
 	return (
 		name.search(/^\d*$/) < 0 &&
 		!isSupportedRegister(name) &&
-		name != "q" &&
 		name.search(/^[FRVXa-z0-9'_-]+$/) >= 0
 	);
 }
@@ -172,7 +181,7 @@ export class AtaAsmParser extends Parser<{ instructions: AtaInst[], externalLabe
 	private afterMalkrz = false;
 	private afterNll = false;
 	private afterCers = false;
-	private afterInstruction = false;
+	private afterDirective = false;
 
 	private labelDefinitions = new Map<string, Token>();
 	private labelUses = new Map<string, Token[]>();
@@ -199,6 +208,8 @@ export class AtaAsmParser extends Parser<{ instructions: AtaInst[], externalLabe
 		this.instId++;
 
 		if (this.parseDirective(token)) {
+			return;
+		} else if (this.parseLifem(token)) {
 			return;
 		} else if (token.text == "fen" || token.text == "dosn") {
 			this.instructions.push({
@@ -332,7 +343,7 @@ export class AtaAsmParser extends Parser<{ instructions: AtaInst[], externalLabe
 		this.afterMalkrz = token.text == "malkrz" || token.text == "malkRz" || token.text == "maldus";
 		this.afterNll = false;
 		this.afterCers = false;
-		this.afterInstruction = true;
+		this.afterDirective = false;
 	}
 
 	private parseDirective(token: Token) {
@@ -349,7 +360,7 @@ export class AtaAsmParser extends Parser<{ instructions: AtaInst[], externalLabe
 		} else if (token.text == "l'") {
 			const label = this.parseLabel(true);
 			this.defineLabel(label);
-			if (!this.afterInstruction) {
+			if (this.afterDirective) {
 				this.warning("l' should be directly preceded by an instruction", token);
 			} else if (this.afterMalkrz) {
 				this.warning(`'${this.previousInstToken!.text}' should not be labeled`, token);
@@ -393,7 +404,51 @@ export class AtaAsmParser extends Parser<{ instructions: AtaInst[], externalLabe
 		this.previousDirectiveToken = token;
 		this.afterNll = token.text == "nll";
 		this.afterCers = token.text == "cers";
-		this.afterInstruction = false;
+		this.afterDirective = true;
+		return true;
+	}
+
+	private parseLifem(token: Token): boolean {
+		let size: number;
+		if (token.text == "lifem") {
+			size = 4;
+		} else if (token.text == "lifem16") {
+			size = 2;
+		} else if (token.text == "lifem8") {
+			size = 1;
+		} else {
+			return false;
+		}
+
+		const valueToken = this.take();
+		if (valueToken == this.eof) {
+			throw new ParseError("Value expected", this.eof);
+		}
+
+		let value: number | string;
+		if (/^\d+$/.test(valueToken.text)) {
+			value = parseInt32(valueToken.text);
+		} else if (valueToken.text == "tvarlon-knloan") {
+			value = TVARLON_KNLOAN_ADDRESS;
+		} else if (isValidLabel(valueToken.text)) {
+			this.useLabel(valueToken);
+			value = valueToken.text;
+		} else {
+			throw new ParseError("Invalid value", valueToken);
+		}
+
+		this.instructions.push({
+			type: "value", token, value, size
+		});
+
+		if (this.afterFi) {
+			this.warning("'fi' should be followed by 'malkrz'", this.previousInstToken);
+		}
+		this.afterFi = false;
+		this.afterMalkrz = false;
+		this.afterNll = false;
+		this.afterCers = false;
+		this.afterDirective = false;
 		return true;
 	}
 
@@ -402,48 +457,66 @@ export class AtaAsmParser extends Parser<{ instructions: AtaInst[], externalLabe
 		if (token == this.eof) {
 			throw new ParseError("Operand expected", this.eof);
 		}
+
 		if (isSupportedRegister(token.text)) {
-			if (this.takeIfString("@")) {
-				const indexToken = this.take();
-				if (!/^\d+$/.test(indexToken.text)) {
-					throw new ParseError("Invalid index", indexToken);
+			if (this.takeIfString("+")) {
+				const dispToken = this.take();
+				if (isSupportedRegister(dispToken.text)) {
+					this.takeString("@");
+					return V.indRegReg(token.text, dispToken.text);
+				} else if (/^\d+$/.test(dispToken.text)) {
+					this.takeString("@");
+					return V.indRegDisp(token.text, parseInt32(dispToken.text));
 				}
-				const index = parseInt32(indexToken.text);
-				if (index == 0) {
-					return V.indReg(token.text);
+				throw new ParseError("Invalid displacement", dispToken);
+			} else if (this.takeIfString("|")) {
+				const dispToken = this.take();
+				if (/^\d+$/.test(dispToken.text)) {
+					this.takeString("@");
+					return V.indRegDisp(token.text, (-parseInt32(dispToken.text)) | 0);
 				}
-				return V.indRegDisp(token.text, (index * 4));
+				throw new ParseError("Invalid displacement", dispToken);
+			} else if (this.takeIfString("@")) {
+				return V.indReg(token.text);
+			} else {
+				return V.reg(token.text);
 			}
-			return V.reg(token.text);
-		} else if (token.text == "q") {
-			if (this.takeIfString("@")) {
-				const indexToken = this.take();
-				if (!/^\d+$/.test(indexToken.text)) {
-					throw new ParseError("Invalid index", indexToken);
-				}
-				const index = parseInt32(indexToken.text);
-				return V.indRegDisp("f5", ((index + 1) * 4));
-			}
-			throw new ParseError("Invalid operand", token);
 		}
+		if (/^\d+$/.test(token.text)) {
+			if (this.takeIfString("+")) {
+				const dispToken = this.take();
+				if (isSupportedRegister(dispToken.text)) {
+					this.takeString("@");
+					return V.indRegDisp(dispToken.text, parseInt32(token.text));
+				}
+				throw new ParseError("Invalid displacement", dispToken);
+			} else if (!writable) {
+				return V.imm(parseInt32(token.text));
+			}
+		}
+		if (isValidLabel(token.text)) {
+			if (token.text == "tvarlon-knloan") {
+				if (this.takeIfString("@")) {
+					throw new ParseError("Builtin label", token);
+				}
+				if (!writable) {
+					return V.imm(TVARLON_KNLOAN_ADDRESS);
+				}
+			} else {
+				this.useLabel(token);
+				if (this.takeIfString("@")) {
+					return V.indLabel(token.text);
+				}
+				if (!writable && allowLabel) {
+					return V.label(token.text);
+				}
+			}
+		}
+
 		if (writable) {
 			throw new ParseError("Invalid operand to write value", token);
 		}
 
-		if (/^\d+$/.test(token.text)) {
-			return V.imm(parseInt32(token.text));
-		}
-		if (!allowLabel) {
-			throw new ParseError("Invalid operand", token);
-		}
-
-		if (token.text == "tvarlon-knloan") {
-			return V.imm(0xba5fb6b0 | 0);
-		}
-		if (isValidLabel(token.text)) {
-			this.useLabel(token);
-			return V.label(token.text);
-		}
 		throw new ParseError("Invalid operand", token);
 	}
 
@@ -456,11 +529,18 @@ export class AtaAsmParser extends Parser<{ instructions: AtaInst[], externalLabe
 		if (token == this.eof) {
 			throw new ParseError("Operand expected", this.eof);
 		}
+
 		if (token.text == "tvarlon-knloan") {
-			return V.imm(0xba5fb6b0 | 0);
+			if (this.takeIfString("@")) {
+				throw new ParseError("Builtin label", token);
+			}
+			return V.imm(TVARLON_KNLOAN_ADDRESS);
 		}
 		if (isValidLabel(token.text)) {
 			this.useLabel(token);
+			if (this.takeIfString("@")) {
+				return V.indLabel(token.text);
+			}
 			return V.label(token.text);
 		}
 		throw new ParseError("Invalid operand", token);
@@ -531,7 +611,10 @@ export class AtaAsmParser extends Parser<{ instructions: AtaInst[], externalLabe
 			this.warning("'fi' should be followed by 'malkrz' or 'maldus'", this.previousInstToken);
 		}
 		if (this.afterNll || this.afterCers) {
-			this.errorWithoutThrow(`'${this.previousDirectiveToken!.text}' must be followed by an instruction`, this.eof);
+			this.errorWithoutThrow(
+				`'${this.previousDirectiveToken!.text}' must be followed by an instruction`,
+				this.previousDirectiveToken
+			);
 		}
 
 		for (const [label, tokens] of this.labelUses) {
