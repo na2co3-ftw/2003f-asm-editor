@@ -23,6 +23,25 @@ export function disassemble(module: AsmModule): string {
 		ret += "\n";
 	}
 
+	for (const {size, value, labels} of module.values) {
+		if (size == 4) {
+			ret += "lifem ";
+		} else {
+			ret += `lifem${(size * 8)} `;
+		}
+
+		if (typeof value == "number") {
+			ret += (value >>> 0).toString();
+		} else {
+			ret += value;
+		}
+
+		for (const label of labels) {
+			ret += ` l' ${label}`;
+		}
+		ret += "\n";
+	}
+
 	return ret;
 }
 
