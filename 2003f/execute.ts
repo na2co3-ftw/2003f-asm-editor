@@ -170,7 +170,7 @@ export class Hardware {
 		} else if (this.cpu.nx == debugOutputAddress) {
 			const value = this.getValue(V.f5_4io);
 			this.log.push((value >>> 0).toString());
-			this.cpu.xx = this.getValue(V.f5);
+			this.cpu.xx = this.getValue(V.f5io);
 			this.updateNX();
 		}
 		return ExecResult.CONTINUE;
