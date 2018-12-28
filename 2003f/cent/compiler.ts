@@ -197,6 +197,9 @@ class CentCompiler {
 		const text = operation.token.text;
 		if (text == "nac") {
 			builder.nac(V.f5io);
+		} else if (text == "sna") {
+			builder.nac(V.f5io);
+			builder.ata(V.imm(1), V.f5io);
 		} else if (BI_OPERATORS.indexOf(text) >= 0) {
 			builder.binOp(text, V.f5io, V.f5_4io);
 			builder.ata(V.imm(4), V.f5);

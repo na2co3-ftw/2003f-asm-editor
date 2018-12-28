@@ -2,8 +2,8 @@ import * as CodeMirror from "codemirror";
 import "codemirror/addon/mode/simple";
 
 const OPERATORS = [
-	"ata", "nta", "lat", "latsna",
-	"kak", "ada", "ekc", "nac", "dal",
+	"ata", "nta", "lat", "latsna", "sna", "kak",
+	"ada", "ekc", "nac", "dal",
 	"dto", "dtosna", "d[rR]o",
 	"xtlo", "xylo", "clo", "niv", "llo", "xolo",
 	"xtlonys", "xylonys", "llonys", "xolonys",
