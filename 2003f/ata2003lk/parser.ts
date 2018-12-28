@@ -225,22 +225,12 @@ export class AtaAsmParser extends Parser<{ instructions: AtaInst[], externalLabe
 				dst: this.parseWritableOperand()
 			});
 		} else if (token.text == "ycax") {
-			const value = this.parseWritableOrImmOperand();
-			if (value.type == "Imm") {
-				this.instructions.push({
-					type: "unaryRead",
-					token: token,
-					opcode: token.text,
-					src: value
-				});
-			} else {
-				this.instructions.push({
-					type: "unary",
-					token: token,
-					opcode: token.text,
-					dst: value
-				});
-			}
+			this.instructions.push({
+				type: "unaryRead",
+				token: token,
+				opcode: token.text,
+				src: this.parseOperand()
+			});
 		} else if (token.text == "zali" || token.text == "dus" || token.text == "maldus") {
 			this.instructions.push({
 				type: "unaryRead",
@@ -468,7 +458,7 @@ export class AtaAsmParser extends Parser<{ instructions: AtaInst[], externalLabe
 		return true;
 	}
 
-	private parseOperand(writable: boolean = false, allowLabel: boolean = true): Value {
+	private parseOperand(writable: boolean = false): Value {
 		const token = this.take();
 		if (token == this.eof) {
 			throw new ParseError("Operand expected", this.eof);
@@ -523,7 +513,7 @@ export class AtaAsmParser extends Parser<{ instructions: AtaInst[], externalLabe
 				if (this.takeIfString("@")) {
 					return V.indLabel(token.text);
 				}
-				if (!writable && allowLabel) {
+				if (!writable) {
 					return V.label(token.text);
 				}
 			}
@@ -560,10 +550,6 @@ export class AtaAsmParser extends Parser<{ instructions: AtaInst[], externalLabe
 			return V.label(token.text);
 		}
 		throw new ParseError("Invalid operand", token);
-	}
-
-	private parseWritableOrImmOperand(): WritableValue | Value.Imm {
-		return this.parseOperand(false, false) as WritableValue | Value.Imm;
 	}
 
 	private parseCompare(): Compare {

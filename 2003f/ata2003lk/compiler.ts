@@ -42,7 +42,15 @@ function compile(parsed: { instructions: AtaInst[], externalLabels: Set<string> 
 					builder.nta(V.imm(4), V.f5);
 					builder.krz(convertValue(inst.src), V.f5io);
 				} else if (inst.opcode == "ycax") {
-					builder.ata(V.imm((inst.src as Value.Imm).value * 4), V.f5);
+					if (inst.src.type == "Imm") {
+						builder.ata(V.imm(inst.src.value * 4), V.f5);
+					} else {
+						const srcValue = convertValue(inst.src);
+						builder.ata(srcValue, V.f5);
+						builder.ata(srcValue, V.f5);
+						builder.ata(srcValue, V.f5);
+						builder.ata(srcValue, V.f5);
+					}
 				} else if (inst.opcode == "fenx") {
 					builder.nta(V.imm(4), V.f5);
 					builder.inj(convertValue(inst.src), V.xx, V.f5io);
@@ -56,9 +64,6 @@ function compile(parsed: { instructions: AtaInst[], externalLabels: Set<string> 
 			case "unary":
 				if (inst.opcode == "nac") {
 					builder.nac(convertWritableValue(inst.dst));
-				} else if (inst.opcode == "ycax") {
-					builder.dro(V.imm(2), convertWritableValue(inst.dst));
-					builder.ata(convertWritableValue(inst.dst), V.f5);
 				}
 				break;
 			case "binary":
