@@ -2,6 +2,9 @@ import {Compare, COMPARES, isCompare, ParseError, Register, Token, Value, Writab
 import {AsmBuilder, BINARY_OPERATORS, TERNARY_OPERATORS, V} from "../builder";
 import {parseInt32, Parser} from "../parser";
 
+export type AtaValue = Value & { labelToken?: Token };
+export type AtaWritableValue = WritableValue & { labelToken?: Token };
+
 export type AtaInst =
 	NullaryInst | UnaryReadonlyInst | UnaryInst | BinaryInst | TernaryInst |
 	CompareInst | LarInst | RalInst | LabelDirective | ValueDirective;
@@ -16,46 +19,46 @@ interface UnaryReadonlyInst {
 	type: "unaryRead";
 	token: Token;
 	opcode: string;
-	src: Value;
+	src: AtaValue;
 }
 
 interface UnaryInst {
 	type: "unary";
 	token: Token;
 	opcode: string;
-	dst: WritableValue;
+	dst: AtaWritableValue;
 }
 
 interface BinaryInst {
 	type: "binary";
 	token: Token;
 	opcode: string;
-	src: Value;
-	dst: WritableValue;
+	src: AtaValue;
+	dst: AtaWritableValue;
 }
 
 interface TernaryInst {
 	type: "ternary";
 	token: Token;
 	opcode: string;
-	src: Value;
-	dst1: WritableValue;
-	dst2: WritableValue;
+	src: AtaValue;
+	dst1: AtaWritableValue;
+	dst2: AtaWritableValue;
 }
 
 interface CompareInst {
 	type: "fi";
 	token: Token;
-	a: Value;
-	b: Value;
+	a: AtaValue;
+	b: AtaValue;
 	compare: Compare;
 }
 
 interface LarInst {
 	type: "lar";
 	token: Token;
-	a: Value;
-	b: Value;
+	a: AtaValue;
+	b: AtaValue;
 	compare: Compare;
 	id: number;
 }
@@ -476,7 +479,7 @@ export class AtaAsmParser extends Parser<AtaAsmParsed> {
 		return true;
 	}
 
-	private parseOperand(writable: boolean = false): Value {
+	private parseOperand(writable: boolean = false): AtaValue {
 		const token = this.take();
 		if (token == this.eof) {
 			throw new ParseError("Operand expected", this.eof);
@@ -529,10 +532,10 @@ export class AtaAsmParser extends Parser<AtaAsmParsed> {
 			} else {
 				this.useLabel(token);
 				if (this.takeIfString("@")) {
-					return V.indLabel(token.text);
+					return {...V.indLabel(token.text), labelToken: token};
 				}
 				if (!writable) {
-					return V.label(token.text);
+					return {...V.label(token.text), labelToken: token};
 				}
 			}
 		}
@@ -544,11 +547,11 @@ export class AtaAsmParser extends Parser<AtaAsmParsed> {
 		throw new ParseError("Invalid operand", token);
 	}
 
-	private parseWritableOperand(): WritableValue {
-		return this.parseOperand(true) as WritableValue;
+	private parseWritableOperand(): AtaWritableValue {
+		return this.parseOperand(true) as AtaWritableValue;
 	}
 
-	private parseLabelOperand(): Value {
+	private parseLabelOperand(): AtaValue {
 		const token = this.take();
 		if (token == this.eof) {
 			throw new ParseError("Operand expected", this.eof);
@@ -563,9 +566,9 @@ export class AtaAsmParser extends Parser<AtaAsmParsed> {
 		if (isValidLabel(token.text)) {
 			this.useLabel(token);
 			if (this.takeIfString("@")) {
-				return V.indLabel(token.text);
+				return {...V.indLabel(token.text), labelToken: token};
 			}
-			return V.label(token.text);
+			return {...V.label(token.text), labelToken: token};
 		}
 		throw new ParseError("Invalid operand", token);
 	}

@@ -1,6 +1,6 @@
 import {AsmBuilder, V} from "../builder";
 import {CompileResult, ParseError, Value, WritableValue} from "../types";
-import {AtaAsmParsed, AtaAsmParser, tokenize} from "./parser";
+import {AtaAsmParsed, AtaAsmParser, AtaValue, AtaWritableValue, tokenize} from "./parser";
 
 export function fullCompile(str: string, file: string = ""): CompileResult {
 	const tokenized = tokenize(str.replace(/\r\n?/g, "\n"), file);
@@ -137,14 +137,14 @@ function compile(parsed: AtaAsmParsed, name: string): CompileResult {
 		return label;
 	}
 
-	function convertValue(value: Value, allowConstant: boolean = true): Value {
+	function convertValue(value: AtaValue, allowConstant: boolean = true): Value {
 		if (value.type == "Label") {
 			const constant = parsed.constants.get(value.label);
 			if (constant) {
 				if (allowConstant) {
 					return V.imm(constant);
 				} else {
-					errors.push(new ParseError("Invalid operand", null)); // TODO
+					errors.push(new ParseError("Invalid operand", value.labelToken || null));
 				}
 			}
 
@@ -159,10 +159,10 @@ function compile(parsed: AtaAsmParsed, name: string): CompileResult {
 		return convertWritableValue(value);
 	}
 
-	function convertWritableValue(value: WritableValue): WritableValue {
+	function convertWritableValue(value: AtaWritableValue): WritableValue {
 		if (value.type == "IndLabel") {
 			if (parsed.constants.has(value.label)) {
-				errors.push(new ParseError("Invalid operand", null)); // TODO
+				errors.push(new ParseError("Invalid operand", value.labelToken || null));
 			}
 			if (!parsed.externalLabels.has(value.label)) {
 				return V.indLabel(`--${value.label}--`);
@@ -170,7 +170,7 @@ function compile(parsed: AtaAsmParsed, name: string): CompileResult {
 		}
 		if (value.type == "IndLabelDisp") {
 			if (parsed.constants.has(value.label)) {
-				errors.push(new ParseError("Invalid operand", null)); // TODO
+				errors.push(new ParseError("Invalid operand", value.labelToken || null));
 			}
 			if (!parsed.externalLabels.has(value.label)) {
 				return V.indLabelDisp(`--${value.label}--`, value.offset);
@@ -178,7 +178,7 @@ function compile(parsed: AtaAsmParsed, name: string): CompileResult {
 		}
 		if (value.type == "IndLabelReg") {
 			if (parsed.constants.has(value.label)) {
-				errors.push(new ParseError("Invalid operand", null)); // TODO
+				errors.push(new ParseError("Invalid operand", value.labelToken || null));
 			}
 			if (!parsed.externalLabels.has(value.label)) {
 				return V.indLabelReg(`--${value.label}--`, value.reg);
@@ -186,7 +186,7 @@ function compile(parsed: AtaAsmParsed, name: string): CompileResult {
 		}
 		if (value.type == "IndLabelRegDisp") {
 			if (parsed.constants.has(value.label)) {
-				errors.push(new ParseError("Invalid operand", null)); // TODO
+				errors.push(new ParseError("Invalid operand", value.labelToken || null));
 			}
 			if (!parsed.externalLabels.has(value.label)) {
 				return V.indLabelRegDisp(`--${value.label}--`, value.reg, value.offset);
