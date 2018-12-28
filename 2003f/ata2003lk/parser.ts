@@ -83,7 +83,7 @@ interface ValueDirective {
 const SUPPORTED_REGISTERS = ["f0", "f1", "f2", "f3", "f5"];
 
 const RESERVED_KEYWORDS = [
-	"nll", "l'", "kue", "xok", "xx",
+	"nll", "l'", "kue", "xok", "xx", "snoj",
 	"lifem", "lifem16", "lifem8",
 	"fen", "nac", ...BINARY_OPERATORS, "kak", ...TERNARY_OPERATORS, ...COMPARES,
 	"fi", "inj",
@@ -170,9 +170,16 @@ function isValidLabel(name: string): boolean {
 	);
 }
 
-export class AtaAsmParser extends Parser<{ instructions: AtaInst[], externalLabels: Set<string> }> {
+export interface AtaAsmParsed {
+	instructions: AtaInst[];
+	externalLabels: Set<string>;
+	constants: Map<string, number>;
+}
+
+export class AtaAsmParser extends Parser<AtaAsmParsed> {
 	private instructions: AtaInst[] = [];
 	private externalLabels = new Set<string>();
+	private constants = new Map<string, number>();
 
 	private instId = 0;
 	private previousInstToken: Token | null = null;
@@ -188,7 +195,7 @@ export class AtaAsmParser extends Parser<{ instructions: AtaInst[], externalLabe
 	private larStack: number[] = [];
 	private internalLabels = new Set<string>();
 
-	protected parseRoot(): { instructions: AtaInst[], externalLabels: Set<string> } {
+	protected parseRoot(): AtaAsmParsed {
 		while (this.isNotEOF()) {
 			this.try(() => {
 				this.parseInstruction();
@@ -199,7 +206,8 @@ export class AtaAsmParser extends Parser<{ instructions: AtaInst[], externalLabe
 
 		return {
 			instructions: this.instructions,
-			externalLabels: this.externalLabels
+			externalLabels: this.externalLabels,
+			constants: this.constants
 		};
 	}
 
@@ -400,6 +408,16 @@ export class AtaAsmParser extends Parser<{ instructions: AtaInst[], externalLabe
 				opcode: token.text,
 				label: label,
 			});
+		} else if (token.text == "snoj") {
+			const valueToken = this.take();
+			if (valueToken == this.eof || !/^\d+$/.test(valueToken.text)) {
+				throw new ParseError("Value expected", this.eof);
+			}
+			const value = parseInt32(valueToken.text);
+
+			const label = this.parseLabel(true);
+			this.defineLabel(label);
+			this.constants.set(label.text, value);
 		} else {
 			return false;
 		}
@@ -503,7 +521,7 @@ export class AtaAsmParser extends Parser<{ instructions: AtaInst[], externalLabe
 		if (isValidLabel(token.text)) {
 			if (token.text == "tvarlon-knloan") {
 				if (this.takeIfString("@")) {
-					throw new ParseError("Builtin label", token);
+					throw new ParseError("Invalid operand", token);
 				}
 				if (!writable) {
 					return V.imm(TVARLON_KNLOAN_ADDRESS);

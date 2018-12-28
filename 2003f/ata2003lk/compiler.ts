@@ -1,6 +1,6 @@
 import {AsmBuilder, V} from "../builder";
 import {CompileResult, ParseError, Value, WritableValue} from "../types";
-import {AtaAsmParser, AtaInst, tokenize} from "./parser";
+import {AtaAsmParsed, AtaAsmParser, tokenize} from "./parser";
 
 export function fullCompile(str: string, file: string = ""): CompileResult {
 	const tokenized = tokenize(str.replace(/\r\n?/g, "\n"), file);
@@ -21,7 +21,7 @@ export function fullCompile(str: string, file: string = ""): CompileResult {
 	};
 }
 
-function compile(parsed: { instructions: AtaInst[], externalLabels: Set<string> }, name: string): CompileResult {
+function compile(parsed: AtaAsmParsed, name: string): CompileResult {
 	let builder = new AsmBuilder(name);
 	let errors: ParseError[] = [];
 
@@ -53,7 +53,7 @@ function compile(parsed: { instructions: AtaInst[], externalLabels: Set<string> 
 					}
 				} else if (inst.opcode == "fenx") {
 					builder.nta(V.imm(4), V.f5);
-					builder.inj(convertValue(inst.src), V.xx, V.f5io);
+					builder.inj(convertValue(inst.src, false), V.xx, V.f5io);
 					builder.ata(V.imm(4), V.f5);
 				} else if (inst.opcode == "dus") {
 					builder.krz(convertValue(inst.src), V.xx);
@@ -101,6 +101,9 @@ function compile(parsed: { instructions: AtaInst[], externalLabels: Set<string> 
 				if (inst.opcode == "nll" || inst.opcode == "cers") {
 					builder.nll(convertLabel(inst.label.text));
 				} else if (inst.opcode == "kue") {
+					if (parsed.constants.has(inst.label.text)) {
+						errors.push(new ParseError("Constants can not be exported", inst.label));
+					}
 					builder.setHasMain(false);
 					builder.kue(convertLabel(inst.label.text), inst.label);
 				} else if (inst.opcode == "xok") {
@@ -134,8 +137,17 @@ function compile(parsed: { instructions: AtaInst[], externalLabels: Set<string> 
 		return label;
 	}
 
-	function convertValue(value: Value): Value {
+	function convertValue(value: Value, allowConstant: boolean = true): Value {
 		if (value.type == "Label") {
+			const constant = parsed.constants.get(value.label);
+			if (constant) {
+				if (allowConstant) {
+					return V.imm(constant);
+				} else {
+					errors.push(new ParseError("Invalid operand", null)); // TODO
+				}
+			}
+
 			if (!parsed.externalLabels.has(value.label)) {
 				return V.label(`--${value.label}--`);
 			}
@@ -149,21 +161,33 @@ function compile(parsed: { instructions: AtaInst[], externalLabels: Set<string> 
 
 	function convertWritableValue(value: WritableValue): WritableValue {
 		if (value.type == "IndLabel") {
+			if (parsed.constants.has(value.label)) {
+				errors.push(new ParseError("Invalid operand", null)); // TODO
+			}
 			if (!parsed.externalLabels.has(value.label)) {
 				return V.indLabel(`--${value.label}--`);
 			}
 		}
 		if (value.type == "IndLabelDisp") {
+			if (parsed.constants.has(value.label)) {
+				errors.push(new ParseError("Invalid operand", null)); // TODO
+			}
 			if (!parsed.externalLabels.has(value.label)) {
 				return V.indLabelDisp(`--${value.label}--`, value.offset);
 			}
 		}
 		if (value.type == "IndLabelReg") {
+			if (parsed.constants.has(value.label)) {
+				errors.push(new ParseError("Invalid operand", null)); // TODO
+			}
 			if (!parsed.externalLabels.has(value.label)) {
 				return V.indLabelReg(`--${value.label}--`, value.reg);
 			}
 		}
 		if (value.type == "IndLabelRegDisp") {
+			if (parsed.constants.has(value.label)) {
+				errors.push(new ParseError("Invalid operand", null)); // TODO
+			}
 			if (!parsed.externalLabels.has(value.label)) {
 				return V.indLabelRegDisp(`--${value.label}--`, value.reg, value.offset);
 			}
