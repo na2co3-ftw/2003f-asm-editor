@@ -31,12 +31,17 @@ const BUILTINFUNCTIONS = [
 	"tvarlon-knloan"
 ];
 
+const PREPROCESSORS = [
+	"!snoj", "!fi", "!fi-niv", "!ol", "!if"
+];
+
 CodeMirror.defineSimpleMode("ata2003lk", {
 	start: [
 		{regex: new RegExp(`(${MNEMONICS.join("|")})(?![\\w'_-])`), token: "keyword"},
 		{regex: new RegExp(`(${COMPARES.join("|")})(?![\\w'_-])`), token: "builtin"},
 		{regex: new RegExp(`(${REGISTERS.join("|")})(?![\\w'_-])`), token: "variable"},
 		{regex: new RegExp(`(${DIRECTIVES.join("|")})(?![\\w'_-])`), token: "special"},
+		{regex: new RegExp(`(${PREPROCESSORS.join("|")})(?![\\w'_-])`), token: "special"},
 		{regex: new RegExp(`(${BUILTINFUNCTIONS.join("|")})(?![\\w'_-])`), token: "builtin"},
 		{regex: /lar(?![\w'_-])/, token: "keyword", indent: true},
 		{regex: /ral(?![\w'_-])/, token: "keyword", dedent: true},

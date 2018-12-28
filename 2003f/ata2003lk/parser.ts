@@ -183,6 +183,7 @@ export class AtaAsmParser extends Parser<AtaAsmParsed> {
 	private instructions: AtaInst[] = [];
 	private externalLabels = new Set<string>();
 	private constants = new Map<string, number>();
+	private preprocessorOptions = new Set<string>();
 
 	private instId = 0;
 	private previousInstToken: Token | null = null;
@@ -218,7 +219,10 @@ export class AtaAsmParser extends Parser<AtaAsmParsed> {
 		const token = this.take();
 		this.instId++;
 
-		if (this.parseDirective(token)) {
+
+		if (this.parsePreprocessor(token)) {
+			return;
+		} else if (this.parseDirective(token)) {
 			return;
 		} else if (this.parseLifem(token)) {
 			return;
@@ -476,6 +480,56 @@ export class AtaAsmParser extends Parser<AtaAsmParsed> {
 		this.afterNll = false;
 		this.afterCers = false;
 		this.afterDirective = false;
+		return true;
+	}
+
+	private parsePreprocessor(token: Token): boolean {
+		if (!token.text.startsWith("!")) {
+			return false;
+		}
+		if (token.text == "!snoj") {
+			const option = this.take();
+			if (option == this.eof) {
+				throw new ParseError("Preprocessor option name expected", this.eof);
+			}
+			this.preprocessorOptions.add(option.text);
+		} else if (token.text == "!fi" || token.text == "!fi-niv") {
+			const option = this.take();
+			if (option == this.eof) {
+				throw new ParseError("Preprocessor option name expected", this.eof);
+			}
+
+			let skip = this.preprocessorOptions.has(option.text);
+			if (token.text == "!fi") {
+				skip = !skip;
+			}
+
+			if (skip) {
+				while (true) {
+					const t = this.take();
+					if (t == this.eof) {
+						throw new ParseError("'!if' or '!ol' expected", this.eof);
+					}
+					if (t.text == "!if" || t.text == "!ol") {
+						break;
+					}
+				}
+			}
+		} else if (token.text == "!ol") {
+			while (true) {
+				const t = this.take();
+				if (t == this.eof) {
+					throw new ParseError("'!if' expected", this.eof);
+				}
+				if (t.text == "!if") {
+					break;
+				}
+			}
+		} else if (token.text == "!if") {
+			// nothing
+		} else {
+			this.warning("Unknown preprocessor instruction", token);
+		}
 		return true;
 	}
 
