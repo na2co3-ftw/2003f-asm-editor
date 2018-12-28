@@ -7,7 +7,7 @@ const OPERATORS = [
 	"dto", "dtosna", "d[rR]o",
 	"xtlo", "xylo", "clo", "niv", "llo", "xolo",
 	"xtlonys", "xylonys", "llonys", "xolonys",
-	"k[rR]z", "ach", "roft", "ycax", "pielyn", "kinfit"
+	"k[rR]z", "ach", "roft", "ycax", "pielyn", "kinfit", "tikl"
 ];
 
 const KEYWORDS = ["xok"];

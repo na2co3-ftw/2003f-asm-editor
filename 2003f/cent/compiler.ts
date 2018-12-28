@@ -238,6 +238,10 @@ class CentCompiler {
 			builder.dtosna(V.imm(2), V.f0);
 			builder.nta(V.imm(4), V.f5);
 			builder.krz(V.f0, V.f5io);
+		} else if (text == "tikl") {
+			builder.nta(V.imm(4), V.f5);
+			builder.inj(V.imm(0xba5fb6b0 | 0), V.xx, V.f5io);
+			builder.ata(V.imm(8), V.f5);
 		} else if (this.subroutineMap.has(text)) {
 			const sub = this.subroutineMap.get(text)!;
 			this.usedSubroutines.add(sub);

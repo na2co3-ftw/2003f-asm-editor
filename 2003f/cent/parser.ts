@@ -12,7 +12,7 @@ export const TRI_OPERATORS = ["lat", "latsna"];
 
 const KEYWORDS = [
 	"nac", ...BI_OPERATORS, ...TRI_OPERATORS, ...COMPARES,
-	"krz", "kRz", "ach", "roft", "ycax", "pielyn", "kinfit",
+	"krz", "kRz", "ach", "roft", "ycax", "pielyn", "kinfit", "tikl",
 	"fal", "laf", "fi", "ol", "if", "cecio", "oicec", "<", ">",
 	"kak", "krzq", "kRzq", "achq", "roftq", "malef", "felam"
 ];
