@@ -14,7 +14,7 @@ const KEYWORDS = [
 	"nac", "sna", ...BI_OPERATORS, ...TRI_OPERATORS, ...COMPARES,
 	"krz", "kRz", "ach", "roft", "ycax", "pielyn", "kinfit", "tikl",
 	"fal", "laf", "fi", "ol", "if", "cecio", "oicec", "<", ">",
-	"kak", "krzq", "kRzq", "achq", "roftq", "malef", "felam"
+	"kak", "krzq", "kRzq", "achq", "roftq"
 ];
 
 const IMPROPER_SUBROUTINE_REGEXP = /[^FRVXa-z0-9,.?!':+|=$\\@&#"()《》_-]/;

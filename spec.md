@@ -68,7 +68,6 @@
 参照元: [C#版](https://github.com/Nobuyuki-Tokuchi/Cent)
 
 ### 仕様変更
-* `malef` `felam` による2003lk埋め込みは未実装
 * U+FEFF も空白文字として扱う。 U+0085 は空白文字として扱わない (C#の `Char.IsWhiteSpace` と JSの `/\s/` の差)
 * `xok` の引数の数として2^31以上の数を記述可能に (2^32の剰余として扱う)
 * サブルーチンの最初に `fen` を挿入する (ステップ実行のため)
