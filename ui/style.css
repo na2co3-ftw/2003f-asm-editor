@@ -135,7 +135,6 @@ div {
 	padding-top: 3px;
 }
 .out-memory-pointer {
-	outline: 1px solid black;
 	position: relative;
 }
 .out-memory-pointer::before {
@@ -146,7 +145,11 @@ div {
 	font-size: 60%;
 }
 
-.out-memory-pointer.f5 {
+.out-memory-pointer-inner {
+	outline: 1px solid black;
+}
+
+.out-memory-pointer.f5 .out-memory-pointer-inner {
 	outline-color: blue;
 }
 .out-memory-pointer.f5::before {

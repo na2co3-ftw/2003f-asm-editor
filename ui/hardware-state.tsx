@@ -158,7 +158,7 @@ const MemorySection: React.SFC<MemorySectionProps> = (props) => {
 	for (let i = 0; i < SECTION_LENGTH; i += unit) {
 		memoryHTML += " ";
 		if (address == props.f5) {
-			memoryHTML += '<span class="out-memory-pointer f5">';
+			memoryHTML += '<span class="out-memory-pointer f5"><span class="out-memory-pointer-inner">';
 			inF5 = true;
 		}
 
@@ -193,7 +193,7 @@ const MemorySection: React.SFC<MemorySectionProps> = (props) => {
 
 		if (inF5) {
 			if (address == ((props.f5 + 4 - unit) | 0)) {
-				memoryHTML += '</span>';
+				memoryHTML += '</span></span>';
 				inF5 = false;
 			}
 		}
