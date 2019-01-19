@@ -10,6 +10,7 @@ import "codemirror/addon/lint/lint.css";
 
 import "../codemirror/mode/2003lk/2003lk";
 import "../codemirror/mode/tinka/tinka";
+import "../codemirror/mode/tinka_new/tinka_new";
 import "../codemirror/mode/cent/cent";
 import "../codemirror/mode/ata2003lk/ata2003lk";
 

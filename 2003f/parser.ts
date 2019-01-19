@@ -58,6 +58,17 @@ export abstract class Parser<T> {
 		return null;
 	}
 
+	protected takeIf(predicate: (token: Token) => boolean): Token | null {
+		if (this.index < this.tokens.length) {
+			const token = this.tokens[this.index];
+			if (predicate(token)) {
+				this.index++;
+				return token;
+			}
+		}
+		return null;
+	}
+
 	protected lookaheadString(text: string, pos: number = 1): boolean {
 		const index = this.index + pos - 1;
 		if (index < this.tokens.length) {

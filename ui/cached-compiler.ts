@@ -2,6 +2,7 @@ import isEqual from "lodash.isequal";
 
 import {fullCompile as compileAsm} from "../2003f/2003lk/parser";
 import {fullCompile as compileTinka} from "../2003f/tinka/compiler";
+import {fullCompile as compileTinkaNew} from "../2003f/tinka_new/compiler";
 import {fullCompile as compileCent} from "../2003f/cent/compiler";
 import {fullCompile as compileAtaAsm} from "../2003f/ata2003lk/compiler";
 import {linkModules, Program} from "../2003f/linker";
@@ -10,7 +11,7 @@ import {disassemble} from "../2003f/disasseble";
 
 export {Program};
 
-export type Language = "2003lk" | "tinka" | "cent" | "ata2003lk";
+export type Language = "2003lk" | "tinka" | "tinka_new" | "cent" | "ata2003lk";
 
 export interface SourceFile {
 	source: string;
@@ -18,7 +19,7 @@ export interface SourceFile {
 	language: Language;
 }
 
-export const LANGUAGES: Language[] = ["2003lk", "tinka", "cent", "ata2003lk"];
+export const LANGUAGES: Language[] = ["2003lk", "tinka", "tinka_new", "cent", "ata2003lk"];
 
 export interface ErrorsAndWarnings {
 	fileErrors: ParseError[][];
@@ -34,6 +35,8 @@ function compile(file: SourceFile): CompileResult {
 			result = compileAsm(file.source, file.name);
 		} else if (file.language == "tinka") {
 			result = compileTinka(file.source, file.name);
+		} else if (file.language == "tinka_new") {
+			result = compileTinkaNew(file.source, file.name);
 		} else if (file.language == "cent") {
 			result = compileCent(file.source, file.name);
 		} else {
