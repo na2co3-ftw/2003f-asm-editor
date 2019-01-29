@@ -8,6 +8,7 @@ const NEGATE_COMPARE: {[compare: string]: Compare} = {
 	clo: "niv",
 	niv: "clo",
 	llo: "xtlo",
+	xolo: "xylo",
 	xtlonys: "llonys",
 	xylonys: "xolonys",
 	llonys: "xtlonys",
