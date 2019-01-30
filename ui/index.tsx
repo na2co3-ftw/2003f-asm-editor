@@ -9,41 +9,8 @@ import {Hardware} from "../2003f/execute";
 import {Token} from "../2003f/types";
 
 document.addEventListener("DOMContentLoaded", function () {
-	ReactDOM.render(<App/>, document.getElementById("root")!);
+	ReactDOM.render(<App/>, document.getElementById("app-root")!);
 });
-
-function Header() {
-	return (
-		<div>
-			<h2>
-				<span className="lineparine">2003'd ferlesyl</span> Editor
-			</h2>
-		</div>
-	);
-}
-
-function Description() {
-	return (
-		<div>
-			<p>
-				<a href="https://github.com/na2co3-ftw/2003f-asm-editor" target="_blank">view on github</a>
-			</p>
-			<p>
-				<a href="http://jurliyuuri.com/OS/" target="_blank">悠里世界のOSのエミュレータ作ろうぜという計画</a>
-			</p>
-			<p>
-				<a href="https://github.com/Nobuyuki-Tokuchi/old_tinka" target="_blank">Nobuyuki-Tokuchi/old_tinka:
-					悠里OSでのBASICみたいなプログラミング言語(だったもの)</a>
-			</p>
-			<p>
-				<a href="https://github.com/Nobuyuki-Tokuchi/Cent" target="_blank">Nobuyuki-Tokuchi/Cent: 悠里OSでのスタック指向プログラミング言語</a>
-			</p>
-			<p>
-				<a href="https://github.com/Nobuyuki-Tokuchi/ata2003lk" target="_blank">Nobuyuki-Tokuchi/ata2003lk: 悠里OSでの2003lkをちょっと何かした言語</a>
-			</p>
-		</div>
-	);
-}
 
 
 interface AppState {
@@ -205,7 +172,6 @@ class App extends React.Component<{}, AppState> {
 
 		return (
 			<div className={this.state.liparxe ? "liparxe" : ""}>
-				<Header/>
 				<p>
 					<label>
 						<input type="checkbox"
@@ -256,8 +222,6 @@ class App extends React.Component<{}, AppState> {
 
 						<HardwareState machine={this.machine} active={this.state.executing}/>
 					</div>
-
-					<Description/>
 				</div>
 			</div>
 		);
