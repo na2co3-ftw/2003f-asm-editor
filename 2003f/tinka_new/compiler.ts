@@ -97,6 +97,9 @@ function compile(parsed: ParseResult, name: string): CompileResult {
 		useLabel(kue);
 	}
 	for (const variable of parsed.variables) {
+		if (globalVariables.has(variable.name.text)) {
+			errors.push(new ParseError(`'${variable.name.text}' is already defined`, variable.name));
+		}
 		globalVariables.add(variable.name.text);
 	}
 
@@ -269,9 +272,9 @@ function compile(parsed: ParseResult, name: string): CompileResult {
 		replacedAlloc.position = stackAlloc.position;
 	}
 
-	function spillReplaceRegisterAlloc(regAlloc: RegisterAlloc, replace: TinkaValue, frame: Frame): RegisterAlloc {
+	function spillReplaceRegisterAlloc(regAlloc: RegisterAlloc, replace: number | StackAlloc | Reference, frame: Frame): RegisterAlloc {
 		let stackAlloc: StackAlloc;
-		if (typeof replace != "number" && replace.type == "alloc" && !isRegisterAlloc(replace)) {
+		if (typeof replace != "number" && replace.type == "alloc") {
 			stackAlloc = replace;
 		} else {
 			stackAlloc = alloc(null, frame, true) as StackAlloc;
@@ -320,9 +323,12 @@ function compile(parsed: ParseResult, name: string): CompileResult {
 		builder.nll(cersva.name.text);
 		defineLabel(cersva.name);
 
+		if (cersva.name.text == "fasal" && cersva.args.length != 0) {
+			warnings.push(new ParseError("'fasal' should not have arguments", cersva.args[0]));
+		}
 		for (let i = 0; i < cersva.args.length; i++) {
 			const arg = cersva.args[i];
-			if (frame.variables.get(arg.text)) {
+			if (frame.variables.has(arg.text)) {
 				errors.push(new ParseError(`'${arg.text}' is already defined`, arg));
 			} else {
 				frame.variables.set(arg.text, i - cersva.args.length);
@@ -331,8 +337,7 @@ function compile(parsed: ParseResult, name: string): CompileResult {
 
 		const blockFrame = genBlockPrologue(cersva.body, frame);
 		genBlock(cersva.body, blockFrame);
-		if (cersva.body.statements.length == 0 ||
-			cersva.body.statements[cersva.body.statements.length - 1] instanceof Statement.Dosnud) {
+		if (cersva.body.statements[cersva.body.statements.length - 1] instanceof Statement.Dosnud) {
 			return;
 		}
 		genUpdateStackSize(0, blockFrame);
@@ -351,7 +356,7 @@ function compile(parsed: ParseResult, name: string): CompileResult {
 			size: parentFrame.size,
 		};
 		for (const variable of block.variables) {
-			if (frame.variables.get(variable.name.text)) {
+			if (frame.variables.has(variable.name.text)) {
 				errors.push(new ParseError(`'${variable.name.text} is already defined`, variable.name));
 			} else {
 				frame.fixedSize += typeof variable.size == "undefined" ? 1 : variable.size;
@@ -388,6 +393,9 @@ function compile(parsed: ParseResult, name: string): CompileResult {
 				builder.krz(toValue(value, frame), varValue);
 				release(regAlloc, frame);
 			});
+			release(value, frame);
+		} else if (statement instanceof Statement.Compute) {
+			release(genExpression(statement.value, frame), frame);
 		} else if (statement instanceof Statement.Fi) {
 			const label = getInternalLabel("fi");
 
@@ -412,9 +420,11 @@ function compile(parsed: ParseResult, name: string): CompileResult {
 			builder.krz(V.label(rinyv), V.xx);
 			builder.nll(situv);
 		} else if (statement instanceof Statement.Dosnud) {
-			const value = genExpression(statement.value, frame);
-			builder.krz(toValue(value, frame), V.f0);
-			release(value, frame);
+			if (statement.value != null) {
+				const value = genExpression(statement.value, frame);
+				builder.krz(toValue(value, frame), V.f0);
+				release(value, frame);
+			}
 			if (frame.size) {
 				builder.ata(V.imm(frame.size * 4), V.f5);
 			}
@@ -490,7 +500,6 @@ function compile(parsed: ParseResult, name: string): CompileResult {
 			for (const regAlloc of frame.registerAllocs.values()) {
 				spillRegisterAlloc(regAlloc, frame);
 			}
-			frame.registerAllocs.clear();
 
 			let argValues: TinkaValue[] = [];
 			for (const arg of expression.args) {
@@ -498,7 +507,7 @@ function compile(parsed: ParseResult, name: string): CompileResult {
 			}
 
 			let callFramePosition = frame.size + 1;
-			while (!frame.memoryAllocs.has(callFramePosition - 1) && callFramePosition > frame.fixedSize) {
+			while (!frame.memoryAllocs.has(callFramePosition - 1) && callFramePosition - 1 > frame.fixedSize) {
 				callFramePosition--;
 			}
 			genUpdateStackSize(callFramePosition + expression.args.length, frame);

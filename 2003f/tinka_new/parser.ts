@@ -1,4 +1,4 @@
-import {isCompare, ParseError, Token} from "../types";
+import {COMPARES, isCompare, ParseError, Token} from "../types";
 import {isValidLabel} from "../2003lk/parser";
 import {parseInt32, Parser} from "../parser";
 
@@ -43,6 +43,15 @@ export namespace Statement {
 		}
 	}
 
+	export class Compute extends Statement {
+		constructor(
+			token: Token,
+			public value: Expression
+		) {
+			super(token);
+		}
+	}
+
 	export class Fi extends Statement {
 		constructor(
 			token: Token,
@@ -66,7 +75,7 @@ export namespace Statement {
 	export class Dosnud extends Statement {
 		constructor(
 			token: Token,
-			public value: Expression
+			public value: Expression | null
 		) {
 			super(token);
 		}
@@ -123,8 +132,17 @@ export namespace Expression {
 	}
 }
 
-
 const DELIMITERS = new Set([":", "(", ")", ",", "+", "|", "#"]);
+
+const RESERVED_KEYWORDS = [
+	"kue", "xok", "cersva", "rinyv", "situv",
+	"anax", "el", "eksa", "fi", "fal", "dosnud",
+	...COMPARES,
+	"ada", "ekc", "dal",
+	"dto", "dtosna", "dro", "dRo",
+	"lat", "latsna", "kak", "kaksna",
+	"sna", "nac"
+];
 
 export function tokenize(source: string, file: string = ""):
 	{ tokens: Token[], eof: Token } {
@@ -220,11 +238,11 @@ export class TinkaParser extends Parser<ParseResult> {
 			return;
 		}
 		if (token.text == "xok") {
-			this.xokList.push(this.parseLabel(true));
+			this.xokList.push(this.parseLabel());
 			return;
 		}
 		if (token.text == "anax") {
-			const anax = this.parseAnaxContent();
+			const anax = this.parseAnaxContent(true);
 			this.globalVariables.push(anax.variable);
 			if (anax.statement) {
 				this.initializeStatements.push(anax.statement);
@@ -232,17 +250,12 @@ export class TinkaParser extends Parser<ParseResult> {
 			return;
 		}
 		if (token.text == "cersva") {
-			const name = this.parseCersvaName(true);
-
+			const name = this.parseLabel();
 			this.takeString("(");
 			let args: Token[] = [];
 			if (!this.takeIfString(")")) {
 				while (true) {
-					const arg = this.take();
-					if (arg == this.eof) {
-						throw new ParseError("Argument expected", arg);
-					}
-					args.push(arg);
+					args.push(this.parseIdentifier("Argument name expected"));
 					const punc = this.take();
 					if (punc.text == ")") {
 						break;
@@ -280,7 +293,7 @@ export class TinkaParser extends Parser<ParseResult> {
 
 			if (this.takeIfString("anax")) {
 				this.try(() => {
-					const anax = this.parseAnaxContent();
+					const anax = this.parseAnaxContent(false);
 					variables.push(anax.variable);
 					if (anax.statement) {
 						statements.push(anax.statement);
@@ -308,13 +321,21 @@ export class TinkaParser extends Parser<ParseResult> {
 			return new Statement.Fal(token, condition, body);
 		}
 		if (token = this.takeIfString("dosnud")) {
-			return new Statement.Dosnud(token, this.parseExpression());
+			if (this.lookaheadIf(token =>
+				token.text == "sna" ||
+				token.text == "nac" ||
+				token.text == "#" ||
+				(!DELIMITERS.has(token.text) && RESERVED_KEYWORDS.indexOf(token.text) < 0)
+			)) {
+				return new Statement.Dosnud(token, this.parseExpression());
+			}
+			return new Statement.Dosnud(token, null);
 		}
 
 		const exp = this.parseExpression();
 		if (token = this.takeIfString("el")) {
 			if (!(exp instanceof Expression.Variable)) {
-				throw new ParseError("Invalid assignment", token);
+				throw new ParseError("Invalid assignment left-hand side", token);
 			}
 			return new Statement.Assign(
 				token,
@@ -329,21 +350,24 @@ export class TinkaParser extends Parser<ParseResult> {
 				exp
 			);
 		}
-		throw new ParseError("Statement expected", this.take());
+		return new Statement.Compute(this.eof, exp); // TODO appropriate token
 	}
 
-	private parseAnaxContent(): { variable: VariableDeclaration, statement?: Statement } {
-		const name = this.take();
-		if (name == this.eof) {
-			throw new ParseError("Variable name expected", this.eof);
+	private parseAnaxContent(global: boolean): { variable: VariableDeclaration, statement?: Statement } {
+		const name = this.parseIdentifier("Variable name expected");
+		if (global && !/^[FRVXa-z0-9'_-]+$/.test(name.text)) {
+			this.errorWithoutThrow("Invalid global variable name", name);
 		}
 		let size: number | undefined;
 		if (this.takeIfString(":")) {
 			const sizeToken = this.take();
 			if (sizeToken == this.eof || !/^\d+$/.test(sizeToken.text)) {
-				throw new ParseError("Variable size expected", sizeToken);
+				throw new ParseError("Constant value expected", sizeToken);
 			}
 			size = parseInt32(sizeToken.text);
+			if (size == 0) {
+				this.errorWithoutThrow("Invalid array size", sizeToken);
+			}
 		}
 		const variable = {name, size};
 
@@ -358,28 +382,24 @@ export class TinkaParser extends Parser<ParseResult> {
 		return {variable};
 	}
 
-	private parseLabel(strict: boolean = false): Token {
+	private parseLabel(): Token {
 		const token = this.take();
-		if (token != this.eof && isValidLabel(token.text)) {
-			// if (strict) {
-			// 	if (/^\d/.test(token.text) || isImproperCersva(token.text)) {
-			// 		this.warning("Improper label name", token);
-			// 	}
-			// }
-			return token;
-		}
-		throw new ParseError("Label name expected", token);
-	}
-
-	private parseCersvaName(strict: boolean = false): Token {
-		const token = this.take();
-		if (token != this.eof && isValidLabel(token.text) && !/^\d/.test(token.text)) {
-			// if (strict && isImproperCersva(token.text)) {
-			// 	this.warning("Improper cersva name", token);
-			// }
+		if (token != this.eof && isValidLabel(token.text) && RESERVED_KEYWORDS.indexOf(token.text) < 0) {
 			return token;
 		}
 		throw new ParseError("Function name expected", token);
+	}
+
+	private parseIdentifier(errorMessage: string): Token {
+		const token = this.take();
+		if (token != this.eof &&
+			token.text.search(/^\d*$/) < 0 &&
+			!DELIMITERS.has(token.text) &&
+			RESERVED_KEYWORDS.indexOf(token.text) < 0
+		) {
+			return token;
+		}
+		throw new ParseError(errorMessage, token);
 	}
 
 	private parseExpression(): Expression {
@@ -458,10 +478,7 @@ export class TinkaParser extends Parser<ParseResult> {
 			return new Expression.Constant(parseInt32(token.text));
 		}
 		if (token.text == "#") {
-			const nameToken = this.take();
-			if (nameToken == this.eof) {
-				throw new ParseError("Variable name expected", this.eof);
-			}
+			const nameToken = this.parseIdentifier("Variable name expected");
 
 			let index: Expression | undefined;
 			if (this.takeIfString(":")) {
@@ -469,6 +486,9 @@ export class TinkaParser extends Parser<ParseResult> {
 			}
 
 			return new Expression.Variable(nameToken, index);
+		}
+		if (DELIMITERS.has(token.text) || RESERVED_KEYWORDS.indexOf(token.text) >= 0) {
+			throw new ParseError("Unexpected token", token);
 		}
 		if (this.takeIfString("(")) {
 			let args: Expression[] = [];

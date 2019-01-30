@@ -79,6 +79,16 @@ export abstract class Parser<T> {
 		return false;
 	}
 
+	protected lookaheadIf(predicate: (token: Token) => boolean): boolean {
+		const index = this.index;
+		if (index < this.tokens.length) {
+			if (predicate(this.tokens[index])) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	protected try<T>(func: () => T): T | null {
 		try {
 			return func();
