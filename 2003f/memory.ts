@@ -92,7 +92,7 @@ export class Memory {
 			this.usingSections.sort((a, b) => a - b);
 		}
 
-		const endSection = (address + size - 1) >> SECTION_SIZE;
+		const endSection = (address + size - 1) >>> SECTION_SIZE;
 		if (section != endSection) {
 			if (this.usingSections.indexOf(endSection) < 0) {
 				this.usingSections.push(endSection);
