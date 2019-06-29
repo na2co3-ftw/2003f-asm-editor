@@ -1,3 +1,4 @@
+import {I18nText} from "../i18n/text";
 
 export class Token {
 	constructor(
@@ -159,7 +160,7 @@ export namespace Instruction {
 
 	export interface Error {
 		opcode: "error";
-		message: string;
+		message: I18nText;
 	}
 }
 
@@ -202,11 +203,13 @@ export interface AsmModule {
 }
 
 export class ParseError {
-	constructor(public message: string, public token: Token | null) {}
+	constructor(public message: I18nText | string, public token: Token | null) {
+	}
 }
 
 export type CompileResult = {data: AsmModule | null, errors: ParseError[], warnings: ParseError[]};
 
 export class RuntimeError {
-	constructor(public message: string) {}
+	constructor(public message: I18nText) {
+	}
 }

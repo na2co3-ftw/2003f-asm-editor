@@ -1,4 +1,6 @@
 import {ParseError, Token} from "./types";
+import {I18nText} from "../i18n/text";
+import {ParserText} from "../i18n/parser-text";
 
 export abstract class Parser<T> {
 	private index = 0;
@@ -42,9 +44,9 @@ export abstract class Parser<T> {
 			if (token.text == text) {
 				return token;
 			}
-			throw new ParseError(`'${text}' expected`, token);
+			throw new ParseError(ParserText.expected(text), token);
 		}
-		throw new ParseError(`'${text}' expected`, this.eof);
+		throw new ParseError(ParserText.expected(text), this.eof);
 	}
 
 	protected takeIfString(text: string): Token | null {
@@ -102,11 +104,11 @@ export abstract class Parser<T> {
 		}
 	}
 
-	protected warning(message: string, token: Token | null) {
+	protected warning(message: I18nText | string, token: Token | null) {
 		this.warnings.push(new ParseError(message, token));
 	}
 
-	protected errorWithoutThrow(message: string, token: Token | null) {
+	protected errorWithoutThrow(message: I18nText | string, token: Token | null) {
 		this.errors.push(new ParseError(message, token));
 	}
 }

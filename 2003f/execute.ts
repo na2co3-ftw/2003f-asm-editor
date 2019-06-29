@@ -3,6 +3,8 @@ import {Memory} from "./memory";
 import {initialAddress, Program} from "./linker";
 import {V} from "./builder";
 import {BigInt} from "./bigint";
+import {InterpreterText} from "../i18n/interpreter-text";
+import {I18nText} from "../i18n/text";
 
 const initialF5 = 0x6d7aa0f8|0;
 const outermostRetAddress = 0xbda574b8|0;
@@ -30,21 +32,21 @@ const BININST_TO_FUNC: { [opcode: string]: (a: number, b: number, hw: Hardware) 
 
 	dto(a, b, hw) {
 		if ((b & 0xffffffc0) != 0) {
-			hw.warning(`Shift amount ${b} is larger than 63`);
+			hw.warning(InterpreterText.too_large_shift_amount(b));
 		}
 		return (b & 0xffffffe0) == 0 ? (a >>> b) | 0 : 0;
 	},
 
 	dro(a, b, hw) {
 		if ((b & 0xffffffc0) != 0) {
-			hw.warning(`Shift amount ${b} is larger than 63`);
+			hw.warning(InterpreterText.too_large_shift_amount(b));
 		}
 		return (b & 0xffffffe0) == 0 ? a << b : 0;
 	},
 
 	dtosna(a, b, hw) {
 		if ((b & 0xffffffc0) != 0) {
-			hw.warning(`Shift amount ${b} is larger than 63`);
+			hw.warning(InterpreterText.too_large_shift_amount(b));
 		}
 		if ((b & 0xffffffe0) == 0) {
 			return a >> b;
@@ -138,42 +140,13 @@ export class Hardware {
 		return ret != ExecResult.END && ret != ExecResult.ERROR;
 	}
 
-	private execOneInstruction(breakNewStep: boolean): ExecResult {
-		if (this.program == null) {
-			return ExecResult.END;
+	finalize() {
+		if (this.cpu.f5 != initialF5) {
+			this.errors.push(new RuntimeError(InterpreterText.f5_is_not_preserved({
+				expected: initialF5,
+				actual: this.cpu.f5
+			})));
 		}
-		const xxInst = this.program.readInstruction(this.cpu.nx);
-		if (xxInst == null) {
-			this.errors.push(new RuntimeError("nx has an invalid address " + this.cpu.nx));
-			return ExecResult.ERROR;
-		}
-		const {next, instruction, token} = xxInst;
-		if (breakNewStep && token) {
-			return ExecResult.BREAK;
-		}
-
-		this.cpu.xx = next;
-		try {
-			this.execInstruction(instruction);
-		} catch (e) {
-			if (e instanceof RuntimeError) {
-				this.errors.push(e);
-				return ExecResult.ERROR;
-			}
-			throw e;
-		}
-		this.updateNX();
-
-		if (this.cpu.nx == outermostRetAddress) {
-			this.finalize();
-			return ExecResult.END;
-		} else if (this.cpu.nx == debugOutputAddress) {
-			const value = this.getValue(V.f5_4io);
-			this.log.push((value >>> 0).toString());
-			this.cpu.xx = this.getValue(V.f5io);
-			this.updateNX();
-		}
-		return ExecResult.CONTINUE;
 	}
 
 	private execInstruction(inst: Instruction) {
@@ -267,15 +240,8 @@ export class Hardware {
 		}
 	}
 
-	private resolveLabel(label: string): number {
-		if (this.program == null) {
-			throw new RuntimeError(`Undefined label '${label}'`);
-		}
-		const address = this.program.resolveLabel(this.cpu.nx, label);
-		if (address == null) {
-			throw new RuntimeError(`Undefined label '${label}'`);
-		}
-		return address;
+	warning(message: I18nText) {
+		this.warnings.push(new RuntimeError(message));
 	}
 
 	private getValue(operand: Value): number {
@@ -348,17 +314,56 @@ export class Hardware {
 		this.cpu.setRegister(operand.reg, (oldValue & 0x0000ffff) | ((value & 0xffff) << 16));
 	}
 
-	finalize() {
-		if (this.cpu.f5 != initialF5) {
-			this.errors.push(new RuntimeError(`f5 register was not preserved after the call. It should be in ${initialF5} but is actually in ${this.cpu.f5}`));
+	private execOneInstruction(breakNewStep: boolean): ExecResult {
+		if (this.program == null) {
+			return ExecResult.END;
 		}
+		const xxInst = this.program.readInstruction(this.cpu.nx);
+		if (xxInst == null) {
+			this.errors.push(new RuntimeError(InterpreterText.invalid_nx_address(this.cpu.nx)));
+			return ExecResult.ERROR;
+		}
+		const {next, instruction, token} = xxInst;
+		if (breakNewStep && token) {
+			return ExecResult.BREAK;
+		}
+
+		this.cpu.xx = next;
+		try {
+			this.execInstruction(instruction);
+		} catch (e) {
+			if (e instanceof RuntimeError) {
+				this.errors.push(e);
+				return ExecResult.ERROR;
+			}
+			throw e;
+		}
+		this.updateNX();
+
+		if (this.cpu.nx == outermostRetAddress) {
+			this.finalize();
+			return ExecResult.END;
+		} else if (this.cpu.nx == debugOutputAddress) {
+			const value = this.getValue(V.f5_4io);
+			this.log.push((value >>> 0).toString());
+			this.cpu.xx = this.getValue(V.f5io);
+			this.updateNX();
+		}
+		return ExecResult.CONTINUE;
 	}
 
 	updateNX() {
 		this.cpu.nx = this.cpu.xx;
 	}
 
-	warning(message: string) {
-		this.warnings.push(new RuntimeError(message));
+	private resolveLabel(label: string): number {
+		if (this.program == null) {
+			throw new RuntimeError(InterpreterText.undefined_label(label));
+		}
+		const address = this.program.resolveLabel(this.cpu.nx, label);
+		if (address == null) {
+			throw new RuntimeError(InterpreterText.undefined_label(label));
+		}
+		return address;
 	}
 }

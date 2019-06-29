@@ -1,5 +1,6 @@
 import {AsmModule, Instruction, ParseError, Token} from "./types";
 import {Memory} from "./memory";
+import {LinkerText} from "../i18n/linker-text";
 
 export const initialAddress = 0x14830000|0;
 
@@ -90,7 +91,7 @@ export function linkModules(files: AsmModule[]): {program: Program, errors: Pars
 		if (file.hasMain) {
 			pageId = 0;
 			if (hasMain) {
-				errors.push(new ParseError("Multiple main files", null));
+				errors.push(new ParseError(LinkerText.multiple_main_files, null));
 			} else {
 				pageId = 0;
 				hasMain = true;
@@ -104,7 +105,7 @@ export function linkModules(files: AsmModule[]): {program: Program, errors: Pars
 		for (const kue of file.kueList) {
 			const address = page.labels.get(kue.name)!;
 			if (kueTable.has(kue.name)) {
-				errors.push(new ParseError(`Different files export the same label '${kue.name}'`, kue.token));
+				errors.push(new ParseError(LinkerText.duplicated_global_label(kue.name), kue.token));
 				continue;
 			}
 			kueTable.set(kue.name, address);
@@ -115,13 +116,13 @@ export function linkModules(files: AsmModule[]): {program: Program, errors: Pars
 	for (const file of files) {
 		for (const xok of file.xokList) {
 			if (!kueTable.has(xok.name)) {
-				errors.push(new ParseError(`'${xok.name}' is not defined in any other file`, xok.token));
+				errors.push(new ParseError(LinkerText.undefined_external_label(xok.name), xok.token));
 			}
 		}
 	}
 
 	if (!hasMain) {
-		errors.push(new ParseError("No main file", null));
+		errors.push(new ParseError(LinkerText.no_main_files, null));
 	}
 	return {program: new Program(pages, kueTable), errors};
 }
@@ -149,7 +150,7 @@ function toTentativeLoad(baseAddress: number, file: AsmModule): {page: Tentative
 		}
 		localAddress = next;
 		if (localAddress >= PAGE_SIZE) {
-			errors.push(new ParseError(`Size of '${file.name}' is exceeds the limit`, null));
+			errors.push(new ParseError(LinkerText.too_large_file(file.name), null));
 			break;
 		}
 	}
@@ -160,7 +161,7 @@ function toTentativeLoad(baseAddress: number, file: AsmModule): {page: Tentative
 			localAddress += value.size - localAddress % value.size;
 		}
 		if (localAddress >= PAGE_SIZE) {
-			errors.push(new ParseError(`Size of '${file.name}' is exceeds the limit`, null));
+			errors.push(new ParseError(LinkerText.too_large_file(file.name), null));
 			break;
 		}
 		const address = (baseAddress + localAddress) | 0;

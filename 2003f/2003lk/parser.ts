@@ -4,6 +4,8 @@ import {
 } from "../types";
 import {AsmBuilder, BINARY_OPERATORS, BuilderError, TERNARY_OPERATORS, V} from "../builder";
 import {parseInt32, Parser} from "../parser";
+import {literalText} from "../../i18n/text";
+import {ParserText} from "../../i18n/parser-text";
 
 const RESERVED_REGISTERS = [
 	"f0", "f1", "f2", "f3", "f4", "f5", "f6", "f7", "xx"
@@ -124,7 +126,7 @@ export class AsmParser extends Parser<AsmModule> {
 			return this.builder.getAsmModule();
 		} catch (e) {
 			if (e instanceof BuilderError) {
-				throw new ParseError(e.message, this.eof);
+				throw new ParseError(literalText(e.message), this.eof);
 			} else {
 				throw e;
 			}
@@ -168,7 +170,7 @@ export class AsmParser extends Parser<AsmModule> {
 				dsth = this.parseWritableOperand();
 			}
 			if (operandDepends(dstl, dsth)) {
-				this.warning("Undefined behavior", token); // TODO: show warning at operand dstl
+				this.warning(ParserText.undefined_behavior, token); // TODO: show warning at operand dstl
 			}
 			this.builder.triOp(token.text, src, dstl, dsth);
 		} else if (token.text == "fi") {
@@ -185,26 +187,26 @@ export class AsmParser extends Parser<AsmModule> {
 				c = this.parseWritableOperand();
 			}
 			if (operandDepends(c, b)) {
-				this.warning("Undefined behavior", token); // TODO: show warning at operand c
+				this.warning(ParserText.undefined_behavior, token); // TODO: show warning at operand c
 			}
 			this.builder.inj(a, b, c);
 		} else {
-			throw new ParseError("Instruction expected", token);
+			throw new ParseError(ParserText.instruction_expected, token);
 		}
 
 		if (!this.explicitSpecifiedOrder) {
-			this.warning("Operand oder should specified before any instruction", token);
+			this.warning(ParserText.operand_order_should_be_specified, token);
 			this.explicitSpecifiedOrder = true; // Show this warning only once
 		}
 		if (token.text == "malkrz" || token.text == "malkRz") {
 			if (!this.afterFi) {
-				this.warning("'malkrz' should follow 'fi'", token);
+				this.warning(ParserText.malkrz_should_follow_fi, token);
 			}
 			if (this.afterNll) {
-				this.warning("'malkrz' should not be labeled", this.previousDirectiveToken);
+				this.warning(ParserText.malkrz_should_not_be_labeled, this.previousDirectiveToken);
 			}
 		} else if (this.afterFi) {
-			this.warning("'fi' should be followed by 'malkrz'", this.previousInstToken);
+			this.warning(ParserText.fi_should_be_followed_by_malkrz, this.previousInstToken);
 		}
 
 		this.previousInstToken = token;
@@ -231,13 +233,13 @@ export class AsmParser extends Parser<AsmModule> {
 				this.defineLabel(label);
 				this.builder.l(label.text);
 				if (this.afterDirective) {
-					this.warning("l' should be directly preceded by an instruction", token);
+					this.warning(ParserText.l_should_be_directly_preceded_by_an_instruction, token);
 				} else if (this.afterMalkrz) {
-					this.warning("'malkrz' should not be labeled", token);
+					this.warning(ParserText.malkrz_should_not_be_labeled, token);
 				}
 			} catch (e) {
 				if (e instanceof BuilderError) {
-					throw new ParseError(e.message, token);
+					throw new ParseError(literalText(e.message), token);
 				} else {
 					throw e;
 				}
@@ -256,7 +258,7 @@ export class AsmParser extends Parser<AsmModule> {
 		}
 
 		if (this.afterNll) {
-			this.warning("'nll' should be directly followed by an instruction", token);
+			this.warning(ParserText.nll_should_be_directly_followed_by_an_instruction, token);
 		}
 		this.previousDirectiveToken = token;
 		this.afterNll = token.text == "nll";
@@ -278,7 +280,7 @@ export class AsmParser extends Parser<AsmModule> {
 
 		const valueToken = this.take();
 		if (valueToken == this.eof) {
-			throw new ParseError("Value expected", this.eof);
+			throw new ParseError(ParserText.value_expected, this.eof);
 		}
 		if (/^\d+$/.test(valueToken.text)) {
 			this.builder.addValue(parseInt32(valueToken.text), size);
@@ -286,11 +288,11 @@ export class AsmParser extends Parser<AsmModule> {
 			this.useLabel(valueToken);
 			this.builder.addValue(valueToken.text, size);
 		} else {
-			throw new ParseError("Invalid value", valueToken);
+			throw new ParseError(ParserText.invalid_value, valueToken);
 		}
 
 		if (this.afterFi) {
-			this.warning("'fi' should be followed by 'malkrz'", this.previousInstToken);
+			this.warning(ParserText.fi_should_be_followed_by_malkrz, this.previousInstToken);
 		}
 		this.afterFi = false;
 		this.afterMalkrz = false;
@@ -302,7 +304,7 @@ export class AsmParser extends Parser<AsmModule> {
 	private parseOperand(writable: boolean = false): Value {
 		const token = this.take();
 		if (token == this.eof) {
-			throw new ParseError("Operand expected", this.eof);
+			throw new ParseError(ParserText.operand_expected, this.eof);
 		}
 
 		if (isRegister(token.text)) {
@@ -315,7 +317,7 @@ export class AsmParser extends Parser<AsmModule> {
 					this.takeString("@");
 					return V.indRegDisp(token.text, parseInt32(dispToken.text));
 				}
-				throw new ParseError("Invalid displacement", dispToken);
+				throw new ParseError(ParserText.invalid_displacement, dispToken);
 			} else if (this.takeIfString("@")) {
 				return V.indReg(token.text);
 			} else {
@@ -330,7 +332,7 @@ export class AsmParser extends Parser<AsmModule> {
 					if (this.takeIfString("+")) {
 						const disp2Token = this.take();
 						if (!/^\d+$/.test(disp2Token.text)) {
-							throw new ParseError("Invalid displacement", disp2Token);
+							throw new ParseError(ParserText.invalid_displacement, disp2Token);
 						}
 						this.takeString("@");
 						return V.indLabelRegDisp(token.text, dispToken.text, parseInt32(disp2Token.text));
@@ -342,7 +344,7 @@ export class AsmParser extends Parser<AsmModule> {
 					if (this.takeIfString("+")) {
 						const disp2Token = this.take();
 						if (!isRegister(disp2Token.text)) {
-							throw new ParseError("Invalid displacement", disp2Token);
+							throw new ParseError(ParserText.invalid_displacement, disp2Token);
 						}
 						this.takeString("@");
 						return V.indLabelRegDisp(token.text, disp2Token.text, parseInt32(dispToken.text));
@@ -351,7 +353,7 @@ export class AsmParser extends Parser<AsmModule> {
 						return V.indLabelDisp(token.text, parseInt32(dispToken.text));
 					}
 				}
-				throw new ParseError("Invalid displacement", dispToken);
+				throw new ParseError(ParserText.invalid_displacement, dispToken);
 			} else if (this.takeIfString("@")) {
 				return V.indLabel(token.text);
 			} else if (!writable) {
@@ -359,13 +361,13 @@ export class AsmParser extends Parser<AsmModule> {
 			}
 		}
 		if (writable) {
-			throw new ParseError("Invalid operand to write value", token);
+			throw new ParseError(ParserText.invalid_operand_to_write, token);
 		}
 
 		if (/^\d+$/.test(token.text)) {
 			return V.imm(parseInt32(token.text));
 		}
-		throw new ParseError("Invalid operand", token);
+		throw new ParseError(ParserText.invalid_operand, token);
 	}
 
 	private parseWritableOperand(): WritableValue {
@@ -377,29 +379,29 @@ export class AsmParser extends Parser<AsmModule> {
 		if (token != this.eof && isCompare(token.text)) {
 			return token.text;
 		}
-		throw new ParseError("Compare keyword expected", token);
+		throw new ParseError(ParserText.compare_keyword_expected, token);
 	}
 
 	private parseLabel(strict: boolean = false): Token {
 		const token = this.take();
 		if (token == this.eof) {
-			throw new ParseError("Label name expected", token);
+			throw new ParseError(ParserText.label_name_expected, token);
 		}
 		if (isValidLabel(token.text)) {
 			if (strict) {
 				if (RESERVED_KEYWORDS.indexOf(token.text) >= 0) {
-					this.warning("Improper label name", token);
+					this.warning(ParserText.deprecated_label_name, token);
 				}
 			}
 			return token;
 		}
-		throw new ParseError("Invalid label name", token);
+		throw new ParseError(ParserText.invalid_label_name, token);
 	}
 
 	private defineLabel(token: Token) {
 		const definedLabel = this.labelDefinitions.get(token.text);
 		if (definedLabel) {
-			this.errorWithoutThrow(`'${token.text}' is already defined`, token);
+			this.errorWithoutThrow(ParserText.already_defined(token.text), token);
 		} else {
 			this.labelDefinitions.set(token.text, token);
 		}
@@ -419,18 +421,18 @@ export class AsmParser extends Parser<AsmModule> {
 			const def = this.labelDefinitions.has(label);
 			if (!def) {
 				for (const token of tokens) {
-					this.errorWithoutThrow(`'${label}' is not defined`, token);
+					this.errorWithoutThrow(ParserText.undefined(label), token);
 				}
 			} else {
 				this.labelDefinitions.delete(label);
 			}
 		}
 		for (const [label, token] of this.labelDefinitions.entries()) {
-			this.warning(`'${label}' is defined but not used`, token);
+			this.warning(ParserText.unused(label), token);
 		}
 
 		if (this.afterFi) {
-			this.warning("'fi' should be followed by 'malkrz'", this.previousInstToken);
+			this.warning(ParserText.fi_should_be_followed_by_malkrz, this.previousInstToken);
 		}
 	}
 }

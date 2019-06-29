@@ -1,4 +1,5 @@
 import {Hardware} from "./execute";
+import {InterpreterText} from "../i18n/interpreter-text";
 
 function decompose(a: number): [number, number, number, number] {
 	return [
@@ -22,7 +23,7 @@ export class Memory {
 
 	write(address: number, value: number) {
 		if ((address & 0x3) != 0) {
-			this.hw.warning(`Write memory by not aligned address ${address}`);
+			this.hw.warning(InterpreterText.write_memory_not_aligned(address));
 		}
 		const [a, b, c, d] = decompose(value);
 		this.writeByte(address, a);
@@ -34,7 +35,7 @@ export class Memory {
 
 	write16(address: number, value: number) {
 		if ((address & 0x1) != 0) {
-			this.hw.warning(`Write memory by not aligned address ${address}`);
+			this.hw.warning(InterpreterText.write_memory_not_aligned(address));
 		}
 		this.writeByte(address, (value >> 8) & 0xff);
 		this.writeByte(address + 1, value & 0xff);
@@ -48,7 +49,7 @@ export class Memory {
 
 	read16(address: number): number {
 		if ((address & 0x1) != 0) {
-			this.hw.warning(`Read memory by not aligned address ${address}`);
+			this.hw.warning(InterpreterText.read_memory_not_aligned(address));
 		}
 		const a = this.readByte(address);
 		const b = this.readByte(address + 1);
@@ -57,7 +58,7 @@ export class Memory {
 
 	read(address: number): number {
 		if ((address & 0x3) != 0) {
-			this.hw.warning(`Read memory by not aligned address ${address}`);
+			this.hw.warning(InterpreterText.read_memory_not_aligned(address));
 		}
 		const a = this.readByte(address);
 		const b = this.readByte(address + 1);
@@ -79,7 +80,7 @@ export class Memory {
 			return this.data[address];
 		}
 		const value = Math.floor(Math.random() * 0x100);
-		this.hw.warning("Read undefined memory");
+		this.hw.warning(InterpreterText.read_memory_uninitialized);
 		this.writeByte(address, value);
 		this.useMemory(address, 1);
 		return value;

@@ -1,8 +1,11 @@
 import React from "react";
 
 import {isTranspilableToAsm, Language, LANGUAGES, SourceFile} from "./cached-compiler";
+import {TextLanguage} from "../i18n/text";
+import {UIText} from "../i18n/ui-text";
 
 interface EditorStatusBarProps {
+	language: TextLanguage;
 	file: SourceFile;
 	changeLanguage: (language: Language) => void
 	transpileFile: () => void
@@ -37,7 +40,7 @@ export default class EditorStatusBar extends React.PureComponent<EditorStatusBar
 				<button
 					disabled={!isTranspilableToAsm(this.props.file.language)}
 					onClick={this.props.transpileFile}
-				>トランスパイル</button>
+				>{UIText.transpile.get(this.props.language)}</button>
 			</div>
 		);
 	}

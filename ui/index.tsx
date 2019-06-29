@@ -7,6 +7,8 @@ import "./style.css";
 
 import {Hardware} from "../2003f/execute";
 import {Token} from "../2003f/types";
+import {TextLanguage} from "../i18n/text";
+import {UIText} from "../i18n/ui-text";
 
 document.addEventListener("DOMContentLoaded", function () {
 	ReactDOM.render(<App/>, document.getElementById("app-root")!);
@@ -14,6 +16,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 interface AppState {
+	language: TextLanguage;
 	liparxe: boolean;
 	// machine: Hardware;
 	// timeOutHandler: number | null;
@@ -32,6 +35,7 @@ class App extends React.Component<{}, AppState> {
 		super(props);
 
 		this.state = {
+			language: "ja",
 			liparxe: false,
 			executing: false,
 			pausing: false,
@@ -172,17 +176,21 @@ class App extends React.Component<{}, AppState> {
 
 		return (
 			<div className={this.state.liparxe ? "liparxe" : ""}>
+				<h2>
+					{UIText.title.get(this.state.language)}
+				</h2>
 				<p>
 					<label>
 						<input type="checkbox"
 						checked={this.state.liparxe}
 						onChange={this.liparxeChange}/>
-						リパーシェで表示する
+						{UIText.show_in_liparxe.get(this.state.language)}
 					</label>
 				</p>
 
 				<div className="contents">
 					<Editor
+						language={this.state.language}
 						className="editor-pain"
 						ref={el => this.editor = el!}
 						markers={markers}
@@ -193,34 +201,38 @@ class App extends React.Component<{}, AppState> {
 						<button
 							onClick={this.execute}
 							disabled={this.state.executing && !this.state.pausing}
-						>{!this.state.executing ? "実行" : this.state.pausing ? "再開" : "実行中"}
+						>{(!this.state.executing ? UIText.execute : this.state.pausing ? UIText.resume : UIText.executing).get(this.state.language)}
 						</button>
 
 						<button
 							onClick={this.step}
 							disabled={this.state.executing && !this.state.pausing}
-						>{this.state.executing ? "ステップ実行" : "ステップ実行開始"}</button>
+						>{(this.state.executing ? UIText.execute_step : UIText.begin_step_execution).get(this.state.language)}</button>
 
 						{" | "}
 
 						<button
 							onClick={this.pause}
 							disabled={!this.state.executing || this.state.pausing}
-						>一時停止</button>
+						>{UIText.pause.get(this.state.language)}</button>
 
 						<button
 							onClick={this.stop}
 							disabled={!this.state.executing}
-						>終了</button>
+						>{UIText.end.get(this.state.language)}</button>
 
 						<br/>
 
-						実行速度: <input
+						{UIText.execution_speed.get(this.state.language)}: <input
 							type="range" min="70" max="600" step="1"
 							value={this.state.execSpeed} onChange={this.changeSpeed}
 						/>
 
-						<HardwareState machine={this.machine} active={this.state.executing}/>
+						<HardwareState
+							language={this.state.language}
+							machine={this.machine}
+							active={this.state.executing}
+						/>
 					</div>
 				</div>
 			</div>

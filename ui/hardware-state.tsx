@@ -3,10 +3,13 @@ import classNames from "classnames";
 
 import {Hardware} from "../2003f/execute";
 import {SECTION_SIZE} from "../2003f/memory";
+import {TextLanguage} from "../i18n/text";
+import {UIText} from "../i18n/ui-text";
 
 const SECTION_LENGTH = 1 << SECTION_SIZE;
 
 interface HardwareStateProps{
+	language: TextLanguage;
 	machine: Hardware;
 	active: boolean;
 }
@@ -76,7 +79,7 @@ export default class HardwareState extends React.Component<HardwareStateProps, H
 							   checked={this.state.hex}
 							   onChange={this.hexChanged}
 						/>
-						16進数で表示する
+						{UIText.show_in_hexadecimal.get(this.props.language)}
 					</label>
 					<label>
 						<input
@@ -84,7 +87,7 @@ export default class HardwareState extends React.Component<HardwareStateProps, H
 							checked={this.state.byte}
 							onChange={this.unitChanged}
 						/>
-						8ビット
+						{UIText.show_by_8bits.get(this.props.language)}
 					</label>
 					<label>
 						<input
@@ -92,12 +95,12 @@ export default class HardwareState extends React.Component<HardwareStateProps, H
 							checked={!this.state.byte}
 							onChange={this.unitChanged}
 						/>
-						32ビット
+						{UIText.show_by_32bits.get(this.props.language)}
 					</label>
 				</form>
 				<div className={!this.props.active ? "state-inactive": ""}>
 					<p className="monospace">
-						Registers:<br/>
+						{UIText.registers.get(this.props.language)}:<br/>
 						<span className="lineparine">
 							f0 = <span id="out-f0">{this.showInt32Pad(machine.cpu.f0)}</span><br/>
 							f1 = <span id="out-f1">{this.showInt32Pad(machine.cpu.f1)}</span><br/>
@@ -106,15 +109,16 @@ export default class HardwareState extends React.Component<HardwareStateProps, H
 							f5 = <span id="out-f5">{this.showInt32Pad(machine.cpu.f5)}</span><br/>
 							nx = <span id="out-nx">{this.showInt32Pad(machine.cpu.nx)}</span><br/>
 							xx = <span id="out-xx">{this.showInt32Pad(machine.cpu.xx)}</span><br/>
-							flag = <span id="out-flag">{machine.cpu.flag ? "1" : "0"}</span>
+							{UIText.flag.get(this.props.language)} = <span
+							id="out-flag">{machine.cpu.flag ? "1" : "0"}</span>
 						</span>
 					</p>
 					<p className="monospace">
-						Memory:<br/>
+						{UIText.memory.get(this.props.language)}:<br/>
 						<span className="lineparine">{memoryNodes}</span>
 					</p>
 					{machine.log.length != 0 ? <p className="monospace">
-						Logs:<br/>
+						{UIText.logs.get(this.props.language)}:<br/>
 						<span className="lineparine">
 							{machine.log.join(", ")}
 						</span>

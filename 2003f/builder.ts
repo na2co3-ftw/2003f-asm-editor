@@ -2,6 +2,7 @@ import {
 	AsmModule, Compare, Instruction, LabeledInstruction, LabeledValue, LabelWithToken, Register, Token, Value,
 	WritableValue
 } from "./types";
+import {ParserText} from "../i18n/parser-text";
 
 export class BuilderError {
 	constructor(public message: string) {}
@@ -154,7 +155,7 @@ export class AsmBuilder {
 		});
 		if (!this.afterValue) {
 			this.instructions.push({
-				instruction: {opcode: "error", message: "'lifem' is not executable"},
+				instruction: {opcode: "error", message: ParserText.not_executable("lifem")},
 				labels: [],
 				token: this.nextToken || undefined
 			});

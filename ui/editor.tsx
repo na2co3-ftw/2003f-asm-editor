@@ -20,6 +20,8 @@ import EditorTab from "./editor-tab";
 import EditorStatusBar from "./editor-status-bar";
 
 import {ParseError} from "../2003f/types";
+import {TextLanguage} from "../i18n/text";
+import {UIText} from "../i18n/ui-text";
 
 const DEFAULT_ASM_NAME = "fib_non_recursive";
 const DEFAULT_ASM = `'c'i    
@@ -47,6 +49,7 @@ export interface MarkerInfoM extends MarkerInfo {
 }
 
 interface EditorProps {
+	language: TextLanguage;
 	className? : string;
 	markers: MarkerInfoM[]
 	active: boolean
@@ -61,7 +64,7 @@ interface EditorState {
 	linkWarnings: ParseError[];
 }
 
-function parseErrorsToAnnotations(errors: ParseError[], severity: string): CodeMirror.Annotation[] {
+function parseErrorsToAnnotations(errors: ParseError[], severity: string, language: TextLanguage): CodeMirror.Annotation[] {
 	let annotations: CodeMirror.Annotation[] = [];
 	for (const error of errors) {
 		if (error.token != null) {
@@ -70,7 +73,7 @@ function parseErrorsToAnnotations(errors: ParseError[], severity: string): CodeM
 				length = 1;
 			}
 			annotations.push({
-				message: error.message,
+				message: typeof error.message == "string" ? error.message : error.message.get(language),
 				severity,
 				from: CodeMirror.Pos(error.token.row, error.token.column),
 				to: CodeMirror.Pos(error.token.row, error.token.column + length)
@@ -96,8 +99,8 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 				if (!this.state.fileErrors[fileId] || !this.state.fileWarnings[fileId]) {
 					return [];
 				}
-				const errors = parseErrorsToAnnotations(this.state.fileErrors[fileId], "error");
-				const warnings = parseErrorsToAnnotations(this.state.fileWarnings[fileId], "warning");
+				const errors = parseErrorsToAnnotations(this.state.fileErrors[fileId], "error", this.props.language);
+				const warnings = parseErrorsToAnnotations(this.state.fileWarnings[fileId], "warning", this.props.language);
 				return errors.concat(warnings);
 			},
 			async: false,
@@ -338,7 +341,7 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 		});
 		return (
 			<div className={className} >
-				<button onClick={this.showOpenFileDialog}>ファイルを開く</button>
+				<button onClick={this.showOpenFileDialog}>{UIText.open_file.get(this.props.language)}</button>
 				<input
 					type="file"
 					ref={(el => this.openFileInput = el!)}
@@ -375,6 +378,7 @@ export default class Editor extends React.Component<EditorProps, EditorState> {
 					ref={(el => this.cm = el!)}
 				/>
 				<EditorStatusBar
+					language={this.props.language}
 					file={this.state.sources[this.state.fileId]}
 					changeLanguage={this.changeLanguage}
 					transpileFile={this.transpileFile}
